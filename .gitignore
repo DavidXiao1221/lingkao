@@ -1,0 +1,36 @@
+# Local research, planning and validation artifacts are not part of the release.
+/reference/
+/research/
+/docs/
+/output/
+/.playwright-cli/
+qa-screenshots/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local configuration and credentials
+.env
+.env.*
+*.env
+
+# Learning records and database sidecars
+app/data/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

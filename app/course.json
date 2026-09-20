@@ -1,0 +1,259 @@
+{
+  "id": "calculus-substitution",
+  "version": "0.2-alpha.1",
+  "title": "临考 · 换元积分训练",
+  "scope": "先验证一个换元积分单元的训练效果；本轮诊断和复测不检验混合题型识别，也不预测考试分数。",
+  "unit": {
+    "id": "substitution",
+    "name": "换元积分",
+    "goal": "识别内层函数与它的导数，调整系数，独立写出完整原函数。",
+    "minutes": 25,
+    "rule": "先找内层函数 g(x)，再检查旁边有没有 g′(x) 或它的常数倍；把这一部分连同 dx 整体替换成 du。",
+    "boundary": "看到乘积不一定就能直接换元。必须核对导数和系数；换元后不能混用 x 与 u；不定积分最后加 C。",
+    "knowledge": [
+      {
+        "title": "换元的依据",
+        "text": "链式法则：(F(g(x)))′=F′(g(x))g′(x)。积分时反过来使用：设 u=g(x)，把 g′(x)dx 整体替换为 du。"
+      },
+      {
+        "title": "系数匹配",
+        "text": "例如 u=x² 时，du=2x dx；如果题目只有 x dx，应换成 du/2。常数倍可以提出积分号。"
+      },
+      {
+        "title": "幂函数公式",
+        "text": "∫uⁿ du=uⁿ⁺¹/(n+1)+C，n≠−1；特别地，∫u² du=u³/3+C，∫u du=u²/2+C。"
+      },
+      {
+        "title": "指数与三角公式",
+        "text": "∫exp(u) du=exp(u)+C；∫cos(u) du=sin(u)+C；∫sin(u) du=−cos(u)+C。其中 exp(u) 表示 e 的 u 次方。"
+      },
+      {
+        "title": "对数公式",
+        "text": "∫1/u du=ln|u|+C（u≠0）。内层函数恒为正时可直接写 ln(u)。本单元需提交的对数答案均具有正的内层表达式。"
+      },
+      {
+        "title": "写完整并检查",
+        "text": "把 u 全部换回 x，最后加独立的积分常数 +C。再对结果求导，用链式法则检查是否回到原被积式。"
+      }
+    ],
+    "example": {
+      "kind": "indefinite",
+      "integrand": "2*x*cos(x^2)",
+      "answer": "sin(x^2)+C",
+      "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow></math>",
+      "steps": [
+        "设 u=x²，则 du=2x dx。",
+        "原式化为 ∫cos(u) du=sin(u)+C。",
+        "把 u 换回 x²，得到 sin(x²)+C。",
+        "求导检查：sin(x²) 的导数是 cos(x²)×2x，与原被积式一致。"
+      ],
+      "plain": "2*x*cos(x^2)"
+    }
+  },
+  "foundation": {
+    "title": "基础补练：幂函数与常数",
+    "knowledge": [
+      {
+        "title": "加减项分别积分",
+        "text": "积分可以按加减项拆开，常数系数可以提出。函数相乘的积分不能拆成两个积分相乘。"
+      },
+      {
+        "title": "两条基础公式",
+        "text": "∫x dx=x²/2+C；∫1 dx=x+C。合并结果时只需写一个任意常数 C。"
+      }
+    ],
+    "question_id": "basic_foundation"
+  },
+  "questions": [
+    {
+      "id": "substitution_diagnostic",
+      "skill": "substitution",
+      "phase": "diagnostic",
+      "kind": "indefinite",
+      "integrand": "2*x*exp(x^2)",
+      "answer": "exp(x^2)+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "观察指数里的 x²：它的导数是什么？",
+        "设 u=x²，检查 2x dx 是否正好等于 du。",
+        "换元后是 ∫exp(u) du，再换回原变量并加 C。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup></mrow></math>",
+      "solution_steps": [
+        "设 u=x²，则 du=2x dx。",
+        "将原式整体改写为 ∫exp(u) du，不能遗留 x。",
+        "exp(u) 的原函数仍是 exp(u)，换回后为 exp(x²)+C。",
+        "求导检查：exp(x²)×2x，正好等于原被积式。"
+      ]
+    },
+    {
+      "id": "substitution_guided",
+      "skill": "substitution",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "3*x^2*cos(x^3)",
+      "answer": "sin(x^3)+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "观察 cos 里面的 x³，先计算它的导数。",
+        "设 u=x³，则 du=3x² dx，与外面的因子完全匹配。",
+        "cos(u) 的原函数是 sin(u)；最后换回 x 并加 C。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></mrow></math>",
+      "solution_steps": [
+        "设 u=x³，则 du=3x² dx。",
+        "原式变为 ∫cos(u) du=sin(u)+C。",
+        "把 u 换回 x³，得到 sin(x³)+C。",
+        "求导得到 cos(x³)×3x²，与被积式相同。"
+      ]
+    },
+    {
+      "id": "substitution_transfer",
+      "skill": "substitution",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "x*exp(x^2)",
+      "answer": "exp(x^2)/2+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "观察指数里的 x²，注意它的导数与外面的 x 是否完全一致。",
+        "设 u=x²，则 du=2x dx，所以 x dx=du/2。",
+        "把 1/2 留在积分号外，再对 exp(u) 积分。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup><mn>2</mn></mfrac></mrow></mrow></math>",
+      "solution_steps": [
+        "设 u=x²，则 du=2x dx，故 x dx=du/2。",
+        "原式等于 (1/2)∫exp(u) du=exp(u)/2+C。",
+        "换回得到 exp(x²)/2+C。",
+        "求导时乘上 2x，与前面的 1/2 合并后得到 x·exp(x²)。"
+      ]
+    },
+    {
+      "id": "substitution_post",
+      "skill": "substitution",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "6*x*exp(3*x^2+1)",
+      "answer": "exp(3*x^2+1)+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "先看指数里的整体 3x²+1，而不只是 x²。",
+        "设 u=3x²+1，则 du=6x dx，正好对应外面的因子。",
+        "换元后对 exp(u) 积分，再完整换回。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>6</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow></math>",
+      "solution_steps": [
+        "设 u=3x²+1，则 du=6x dx。",
+        "原式化为 ∫exp(u) du=exp(u)+C。",
+        "换回得到 exp(3x²+1)+C。",
+        "对结果求导，链式法则给出 6x·exp(3x²+1)，与被积式相同。"
+      ]
+    },
+    {
+      "id": "substitution_guided_polynomial",
+      "skill": "substitution",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "(2*x+1)*(x^2+x+1)^2",
+      "answer": "(x^2+x+1)^3/3+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "被平方的整体是 x²+x+1，先求这个整体的导数。",
+        "设 u=x²+x+1，则 du=(2x+1)dx。",
+        "换元后是 ∫u² du；用幂函数积分公式，再换回并加 C。"
+      ],
+      "solution_steps": [
+        "设 u=x²+x+1，求导得 du=(2x+1)dx。",
+        "原式变为 ∫u² du=u³/3+C。",
+        "换回 x，结果为 (x²+x+1)³/3+C。",
+        "求导时外层的 3 与分母 3 抵消，再乘内层导数 2x+1，得到原被积式。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mo>(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mn>3</mn></msup><mn>3</mn></mfrac></mrow></mrow></math>"
+    },
+    {
+      "id": "substitution_transfer_trig",
+      "skill": "substitution",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "sin(x)*cos(x)",
+      "answer": "sin(x)^2/2+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "相乘的两个函数中，哪一个的导数正好是另一个？",
+        "可设 u=sin(x)，此时 du=cos(x)dx。",
+        "剩下的是 ∫u du，用幂函数公式后换回 sin(x)。"
+      ],
+      "solution_steps": [
+        "设 u=sin(x)，则 du=cos(x)dx。",
+        "原式变为 ∫u du=u²/2+C。",
+        "换回得到 sin²(x)/2+C。输入时写 sin(x)^2/2+C。",
+        "求导得到 sin(x)cos(x)。也可设 u=cos(x)，得到 -cos²(x)/2+C，两种原函数只差一个常数。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mn>2</mn></msup><mn>2</mn></mfrac></mrow></mrow></math>"
+    },
+    {
+      "id": "substitution_post_log",
+      "skill": "substitution",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "(2*x+1)/(x^2+x+1)",
+      "answer": "ln(x^2+x+1)+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "比较分母 x²+x+1 的导数与分子。",
+        "设 u=x²+x+1，则 du=(2x+1)dx，原式成为 ∫1/u du。",
+        "1/u 的原函数是 ln|u|；本题 x²+x+1=(x+1/2)²+3/4 恒为正。"
+      ],
+      "solution_steps": [
+        "设 u=x²+x+1，则 du=(2x+1)dx。",
+        "原式变为 ∫1/u du=ln|u|+C。",
+        "因为 x²+x+1=(x+1/2)²+3/4>0，可写为 ln(x²+x+1)+C。",
+        "求导检查：分子为内层导数 2x+1，分母为 x²+x+1，正好还原被积式。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mfrac><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>log</mi><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_foundation",
+      "skill": "basic",
+      "phase": "foundation",
+      "kind": "indefinite",
+      "integrand": "2*x+1",
+      "answer": "x^2+x+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "先把 2x 和常数 1 分别积分。",
+        "x 的积分是 x²/2，1 的积分是 x。",
+        "保留系数 2，合并两项，并加积分常数 C。"
+      ],
+      "solution_steps": [
+        "拆成 ∫2x dx+∫1 dx。",
+        "第一项为 2×x²/2=x²，第二项为 x。",
+        "合并并加常数，得到 x²+x+C。",
+        "求导得到 2x+1。补练结束后回到原来的训练位置。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi></mrow></math>"
+    }
+  ],
+  "diagnostic_order": [
+    "substitution_diagnostic"
+  ],
+  "training_order": [
+    "substitution_guided",
+    "substitution_guided_polynomial",
+    "substitution_transfer",
+    "substitution_transfer_trig"
+  ],
+  "post_order": [
+    "substitution_post",
+    "substitution_post_log"
+  ]
+}

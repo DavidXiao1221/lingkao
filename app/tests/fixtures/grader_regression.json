@@ -1,0 +1,122 @@
+{
+  "questions": [
+    {
+      "id": "basic_diagnostic",
+      "kind": "indefinite",
+      "integrand": "2*x+cos(x)",
+      "answer": "x^2+sin(x)+C"
+    },
+    {
+      "id": "basic_guided",
+      "kind": "indefinite",
+      "integrand": "4*x^3-2*x",
+      "answer": "x^4-x^2+C"
+    },
+    {
+      "id": "basic_transfer",
+      "kind": "indefinite",
+      "integrand": "3*x^2+sin(x)",
+      "answer": "x^3-cos(x)+C"
+    },
+    {
+      "id": "basic_post",
+      "kind": "indefinite",
+      "integrand": "2*x^3-3*cos(x)",
+      "answer": "x^4/2-3*sin(x)+C"
+    },
+    {
+      "id": "substitution_diagnostic",
+      "kind": "indefinite",
+      "integrand": "2*x*exp(x^2)",
+      "answer": "exp(x^2)+C"
+    },
+    {
+      "id": "substitution_guided",
+      "kind": "indefinite",
+      "integrand": "3*x^2*cos(x^3)",
+      "answer": "sin(x^3)+C"
+    },
+    {
+      "id": "substitution_transfer",
+      "kind": "indefinite",
+      "integrand": "x*exp(x^2)",
+      "answer": "exp(x^2)/2+C"
+    },
+    {
+      "id": "substitution_post",
+      "kind": "indefinite",
+      "integrand": "6*x*exp(3*x^2+1)",
+      "answer": "exp(3*x^2+1)+C"
+    },
+    {
+      "id": "parts_diagnostic",
+      "kind": "indefinite",
+      "integrand": "x*cos(x)",
+      "answer": "x*sin(x)+cos(x)+C"
+    },
+    {
+      "id": "parts_guided",
+      "kind": "indefinite",
+      "integrand": "2*x*exp(x)",
+      "answer": "(2*x-2)*exp(x)+C"
+    },
+    {
+      "id": "parts_transfer",
+      "kind": "indefinite",
+      "integrand": "(x+1)*exp(x)",
+      "answer": "x*exp(x)+C"
+    },
+    {
+      "id": "parts_post",
+      "kind": "indefinite",
+      "integrand": "x*sin(x)",
+      "answer": "-x*cos(x)+sin(x)+C"
+    },
+    {
+      "id": "definite_diagnostic",
+      "kind": "definite",
+      "integrand": "3*x^2",
+      "answer": "1"
+    },
+    {
+      "id": "definite_guided",
+      "kind": "definite",
+      "integrand": "2*x",
+      "answer": "3"
+    },
+    {
+      "id": "definite_transfer",
+      "kind": "definite",
+      "integrand": "2*x*exp(x^2)",
+      "answer": "e-1"
+    },
+    {
+      "id": "definite_post",
+      "kind": "definite",
+      "integrand": "2*x+3",
+      "answer": "14"
+    }
+  ],
+  "examples": [
+    {
+      "kind": "indefinite",
+      "integrand": "3*x^2+2",
+      "answer": "x^3+2*x+C"
+    },
+    {
+      "kind": "indefinite",
+      "integrand": "2*x*cos(x^2)",
+      "answer": "sin(x^2)+C"
+    },
+    {
+      "kind": "indefinite",
+      "integrand": "x*exp(x)",
+      "answer": "(x-1)*exp(x)+C"
+    },
+    {
+      "kind": "definite",
+      "integrand": "2*x+1",
+      "answer": "2"
+    }
+  ]
+}
