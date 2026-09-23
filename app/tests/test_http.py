@@ -4,6 +4,7 @@ import copy
 import http.client
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import threading
@@ -12,6 +13,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import server
+import engine
 
 
 class HTTPTests(unittest.TestCase):
@@ -33,8 +35,8 @@ class HTTPTests(unittest.TestCase):
         self.thread.join(2)
         self.temp.cleanup()
 
-    def request(self, method, path, payload=None, cookie=None, token=None, headers=None):
-        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=15)
+    def request(self, method, path, payload=None, cookie=None, token=None, headers=None, port=None):
+        conn = http.client.HTTPConnection("127.0.0.1", port or self.port, timeout=15)
         request_headers = dict(headers or {})
         if cookie:
             request_headers["Cookie"] = cookie
@@ -163,6 +165,112 @@ class HTTPTests(unittest.TestCase):
             results = list(pool.map(lambda _: reset(), range(2)))
         self.assertEqual(sorted(result[0] for result in results), [200, 403])
         self.assertEqual(self.stored()["revision"], self.state["revision"] + 1)
+
+    def shared_database_race(self, first_path, first_payload, second_payload):
+        """Force two independent servers to read the same snapshot, then commit in order."""
+        other = server.LocalServer(port=0, db_path=self.db_path)
+        thread = threading.Thread(target=other.serve_forever, daemon=True)
+        thread.start()
+        ready = threading.Barrier(2)
+        committed = threading.Event()
+        real_save = server.SessionStore.save
+
+        def coordinated_save(store, *args, **kwargs):
+            ready.wait(timeout=8)
+            if store is self.server.store:
+                try:
+                    return real_save(store, *args, **kwargs)
+                finally:
+                    committed.set()
+            self.assertTrue(committed.wait(8))
+            return real_save(store, *args, **kwargs)
+
+        try:
+            with patch.object(server.SessionStore, "save", coordinated_save), ThreadPoolExecutor(max_workers=2) as pool:
+                first = pool.submit(self.request, "POST", first_path, first_payload, self.cookie, self.state["csrf"])
+                second = pool.submit(self.request, "POST", "/api/action", second_payload,
+                                     self.cookie, self.state["csrf"], port=other.server_port)
+                results = first.result(), second.result()
+            self.assertEqual([result[0] for result in results], [200, 409])
+            self.state = results[0][1]
+            return results
+        finally:
+            other.shutdown()
+            other.server_close()
+            thread.join(2)
+
+    def enter_transfer(self):
+        self.enter_training()
+        while self.state["stage"] == "guided":
+            self.assertEqual(self.mutate("skip")[0], 200)
+
+    def test_two_servers_cannot_erase_help_with_concurrent_answer(self):
+        self.enter_transfer()
+        answer = engine.current_q(self.stored())["answer"]
+        payload = {"revision": self.state["revision"], "instance_id": self.state["instance_id"]}
+        before_count = len(self.stored()["attempts"])
+        self.shared_database_race("/api/action", dict(payload, action="hint"),
+                                  dict(payload, action="answer", answer=answer))
+        self.assertEqual(len(self.stored()["attempts"]), before_count)
+        self.assertEqual(len(self.state["hints"]), 1)
+        self.assertTrue(self.state["help_used"])
+        self.assertEqual(self.mutate("answer", answer=answer)[0], 200)
+        attempt = self.stored()["attempts"][-1]
+        self.assertTrue(attempt["assisted"])
+        self.assertFalse(attempt["independent_complete"])
+
+    def test_two_servers_cannot_erase_first_wrong_attempt(self):
+        self.enter_transfer()
+        answer = engine.current_q(self.stored())["answer"]
+        payload = {"revision": self.state["revision"], "instance_id": self.state["instance_id"], "action": "answer"}
+        before_count = len(self.stored()["attempts"])
+        self.shared_database_race("/api/action", dict(payload, answer="0"), dict(payload, answer=answer))
+        self.assertEqual(len(self.stored()["attempts"]), before_count + 1)
+        self.assertEqual(self.stored()["attempts"][-1]["outcome"], "incorrect")
+        self.assertEqual(self.mutate("answer", answer=answer)[0], 200)
+        attempts = self.stored()["attempts"]
+        self.assertEqual(len(attempts), before_count + 2)
+        self.assertEqual([a["outcome"] for a in attempts[-2:]], ["incorrect", "correct"])
+        self.assertFalse(attempts[-1]["first_attempt"])
+        self.assertFalse(attempts[-1]["independent_complete"])
+
+    def test_two_servers_reset_cannot_be_undone_by_inflight_answer(self):
+        self.enter_transfer()
+        old = copy.deepcopy(self.state)
+        payload = {"revision": old["revision"], "instance_id": old["instance_id"],
+                   "action": "answer", "answer": engine.current_q(self.stored())["answer"]}
+        self.shared_database_race("/api/reset", {"revision": old["revision"]}, payload)
+        stored = self.stored()
+        self.assertEqual(stored["phase"], "setup")
+        self.assertEqual(stored["attempts"], [])
+        self.assertNotEqual(stored["participant"], old["participant"])
+        self.assertNotEqual(stored["csrf"], old["csrf"])
+        self.assertEqual(self.request("POST", "/api/action", payload, self.cookie, old["csrf"])[0], 403)
+
+    def test_snapshot_check_survives_independent_process_and_legacy_json(self):
+        sid = self.cookie.split("=", 1)[1]
+        # Older snapshots need not use the current serializer's whitespace.
+        with self.server.store.connect() as connection:
+            connection.execute("UPDATE sessions SET data=? WHERE id=?",
+                               (json.dumps(self.stored(), indent=2), sid))
+        state, snapshot = self.server.store.load_snapshot(sid)
+        code = """
+import sys
+from server import SessionStore
+store = SessionStore(sys.argv[1])
+state, snapshot = store.load_snapshot(sys.argv[2])
+state['revision'] += 1
+state['minutes'] = 45
+store.save(sys.argv[2], state, expected_snapshot=snapshot)
+"""
+        subprocess.run([sys.executable, "-c", code, str(self.db_path), sid],
+                       cwd=engine.ROOT, check=True, capture_output=True, timeout=15)
+        state["revision"] += 1
+        with self.assertRaises(server.ActionError) as error:
+            self.server.store.save(sid, state, expected_snapshot=snapshot)
+        self.assertEqual(error.exception.status, 409)
+        self.assertEqual(self.stored()["minutes"], 45)
+        self.assertEqual(self.stored()["revision"], state["revision"])
 
     def test_exception_does_not_save_partial_mutations(self):
         before = self.stored()

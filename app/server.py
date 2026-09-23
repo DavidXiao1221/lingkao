@@ -33,7 +33,7 @@ POST_PATHS = frozenset(("/api/action", "/api/tutor", "/api/preview", "/api/reset
 
 
 class SessionStore:
-    """Each operation loads fresh JSON under the same per-session lock."""
+    """Local locks serialize requests; SQLite snapshot checks protect other processes."""
 
     def __init__(self, path):
         self.path = Path(path)
@@ -61,14 +61,24 @@ class SessionStore:
             return self.locks.setdefault(sid, threading.RLock())
 
     def load(self, sid):
+        return self.load_snapshot(sid)[0]
+
+    def load_snapshot(self, sid):
         with self.connect() as connection:
             row = connection.execute("SELECT data FROM sessions WHERE id = ?", (sid,)).fetchone()
-        return json.loads(row[0]) if row else None
+        return (json.loads(row[0]), row[0]) if row else (None, None)
 
-    def save(self, sid, state):
+    def save(self, sid, state, *, expected_snapshot):
         encoded = json.dumps(state, ensure_ascii=False)
         with self.connect() as connection:
-            connection.execute("INSERT OR REPLACE INTO sessions VALUES (?, ?)", (sid, encoded))
+            # Compare the exact stored bytes, including legacy JSON formatting. Do not
+            # hold a database transaction open while the math worker is running.
+            updated = connection.execute(
+                "UPDATE sessions SET data = ? WHERE id = ? AND data = ?",
+                (encoded, sid, expected_snapshot),
+            )
+            if updated.rowcount != 1:
+                raise ActionError("学习进度已经更新，本次操作未记录。请刷新后重试。", status=409)
 
     def existing_sid(self, header):
         jar = http.cookies.SimpleCookie()
@@ -84,7 +94,11 @@ class SessionStore:
         sid = secrets.token_urlsafe(32)
         state = new_state()
         with self.lock(sid):
-            self.save(sid, state)
+            with self.connect() as connection:
+                connection.execute(
+                    "INSERT INTO sessions VALUES (?, ?)",
+                    (sid, json.dumps(state, ensure_ascii=False)),
+                )
         return sid
 
     def allow_post(self, sid):
@@ -110,7 +124,7 @@ class LocalServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "LingkaoLocal/0.2-alpha.1"
+    server_version = f"LingkaoLocal/{VERSION}"
 
     def setup(self):
         super().setup()
@@ -245,7 +259,7 @@ class Handler(BaseHTTPRequestHandler):
         if sid is None:
             return self.respond(403, {"error": "会话校验失败，请刷新页面。"})
         with store.lock(sid):
-            state = store.load(sid)
+            state, snapshot = store.load_snapshot(sid)
             # Check the freshly loaded token inside the lock, including for resets.
             token = self.headers.get("X-CSRF-Token", "")
             if state is None or not hmac.compare_digest(token.encode("utf-8"), state["csrf"].encode("utf-8")):
@@ -268,7 +282,7 @@ class Handler(BaseHTTPRequestHandler):
                 # Serialize the response first: errors must never persist partial mutations.
                 result = public(state)
                 json.dumps(result, ensure_ascii=False)
-                store.save(sid, state)
+                store.save(sid, state, expected_snapshot=snapshot)
                 return self.respond(200, result)
             except ActionError as exc:
                 return self.respond(exc.status, {"error": str(exc)})

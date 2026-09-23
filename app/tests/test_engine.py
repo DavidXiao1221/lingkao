@@ -83,7 +83,7 @@ class EngineTests(unittest.TestCase):
         v = eng.public(self.s)
         self.assertFalse(v['export_allowed'])
         self.assertIsNone(v['stage'])
-        for key in ('lesson', 'solution', 'foundation_info', 'feedback', 'plan', 'report'):
+        for key in ('lesson', 'solution', 'foundation_info', 'feedback', 'last_answer', 'plan', 'report'):
             self.assertIsNone(v[key])
         self.assertEqual(v['hints'], [])
         self.assertEqual(v['chat'], [])
@@ -102,6 +102,7 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(v['phase'], 'post')
         self.assertIsNone(v['report'])
         self.assertIsNone(v['feedback'])
+        self.assertIsNone(v['last_answer'])
         self.assertEqual(v['progress']['current'], 2)
         with self.assertRaises(eng.ActionError) as ctx:
             eng.export_state(self.s)
@@ -133,6 +134,104 @@ class EngineTests(unittest.TestCase):
         a = eng._records(self.s, qid)
         self.assertEqual([r['outcome'] for r in a], ['incorrect', 'correct'])
         self.assertFalse(a[-1]['independent_complete'])
+
+    def test_training_submission_restored_after_pause_and_foundation(self):
+        self.training()
+        self.assertIsNone(eng.public(self.s)['last_answer'])
+        self.answer('0')
+        self.assertEqual(eng.public(self.s)['last_answer'], '0')
+        self.act('plan')
+        self.assertIsNone(eng.public(self.s)['last_answer'])
+        self.s = json.loads(json.dumps(self.s))
+        self.act('start_skill')
+        self.assertEqual(eng.public(self.s)['last_answer'], '0')
+        self.act('foundation')
+        self.assertIsNone(eng.public(self.s)['last_answer'])
+        self.answer('1')
+        self.act('return_training')
+        self.assertEqual(eng.public(self.s)['last_answer'], '0')
+        self.act('next')
+        self.assertIsNone(eng.public(self.s)['last_answer'])
+
+    def test_restart_clears_visible_submission_but_retains_history(self):
+        self.finish_all()
+        count = len(self.s['attempts'])
+        self.act('restart_training')
+        self.act('begin_practice')
+        self.assertIsNone(eng.public(self.s)['last_answer'])
+        self.assertIsNone(eng.public(self.s)['feedback'])
+        self.assertEqual(len(self.s['attempts']), count)
+
+    def test_report_shows_each_attempt_without_overwriting_first(self):
+        self.transfer()
+        q = eng.current_q(self.s)
+        self.answer('0')
+        self.act('hint')
+        self.answer(q['answer'].replace('+C', '').replace('+ C', ''))
+        self.answer()
+        self.act('next')
+        while self.s['phase'] == 'training':
+            self.act('skip')
+        self.act('post')
+        while self.s['phase'] == 'post':
+            self.act('skip')
+        before = copy.deepcopy(self.s)
+        rows = eng.public(self.s)['report']['rows']
+        row = next(r for r in rows if r['stage'] == 'transfer')
+        self.assertEqual(row['first_outcome'], 'incorrect')
+        self.assertEqual(row['latest_outcome'], 'correct')
+        self.assertFalse(row['independent_complete'])
+        history = row['attempts']
+        self.assertEqual([r['number'] for r in history], [1, 2, 3])
+        self.assertEqual([r['outcome'] for r in history], ['incorrect', 'incomplete', 'correct'])
+        self.assertEqual([r['assisted'] for r in history], [False, True, True])
+        self.assertEqual([r['hints_used'] for r in history], [0, 1, 1])
+        self.assertEqual(history[-1]['answer'], q['answer'])
+        self.assertEqual(self.s, before)
+        self.assertNotIn('qid', json.dumps(rows))
+        history[0]['answer'] = 'changed in client'
+        self.assertEqual(self.s, before)
+
+    def test_attempt_limit_resets_per_round_without_resetting_first_evidence(self):
+        self.training()
+        self.s.pop('round_attempt_start')  # Existing alpha.1 storage is compatible.
+        for _ in range(10):
+            self.answer('0')
+        with self.assertRaises(eng.ActionError):
+            self.answer()
+        old = copy.deepcopy(self.s['attempts'])
+        self.act('plan')
+        self.act('restart_training')
+        self.act('begin_practice')
+        self.answer()
+        self.assertEqual(self.s['attempts'][:len(old)], old)
+        self.assertEqual(self.s['attempts'][-1]['outcome'], 'correct')
+        self.assertFalse(self.s['attempts'][-1]['first_attempt'])
+        self.assertFalse(self.s['attempts'][-1]['independent_complete'])
+
+    def test_report_retains_help_after_submission_without_changing_attempt(self):
+        self.transfer()
+        self.answer('0')
+        record = copy.deepcopy(self.s['attempts'][-1])
+        self.act('solution')
+        self.act('next')
+        while self.s['phase'] == 'training':
+            self.act('skip')
+        self.act('post')
+        while self.s['phase'] == 'post':
+            self.act('skip')
+        row = next(r for r in eng.public(self.s)['report']['rows'] if r['stage'] == 'transfer')
+        self.assertFalse(row['assisted'])
+        self.assertTrue(row['help_used'])
+        self.assertEqual(row['help_summary'], ['查看完整讲解'])
+        self.assertFalse(row['attempts'][0]['assisted'])
+        self.assertIn(record, self.s['attempts'])
+
+    def test_report_exposure_alone_is_not_reported_as_requested_help(self):
+        self.finish_all()
+        for row in eng.public(self.s)['report']['rows']:
+            self.assertFalse(row['help_used'])
+            self.assertEqual(row['help_summary'], [])
 
     def test_constant_missing_can_retry_but_not_independent(self):
         self.transfer()

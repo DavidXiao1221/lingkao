@@ -7,6 +7,8 @@ import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
+import sympy as sp
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -51,6 +53,72 @@ class GraderTests(unittest.TestCase):
                 result = grade(answer, QUESTIONS[qid])
                 self.assertEqual(result["verdict"], "correct")
                 self.assertTrue(result["answer_complete"])
+
+    def test_logarithm_domain_and_legal_equivalents(self):
+        question = QUESTIONS["substitution_post_log"]
+        for expression in ("ln(x^2+x+1)+C", "ln((x^2+x+1)^2)/2+C",
+                           "-ln(1/(x^2+x+1))+C", "ln((x+0.5)^2+0.75)+C"):
+            with self.subTest(expression=expression):
+                result = grade(expression, question)
+                self.assertEqual(result["verdict"], "correct")
+                self.assertTrue(result["answer_complete"])
+        result = grade("ln(-x^2-x-1)+C", question)
+        self.assertEqual(result["verdict"], "incorrect")
+        self.assertFalse(result["answer_complete"])
+
+    def test_simplification_cannot_erase_invalid_original_domains(self):
+        question = QUESTIONS["basic_foundation"]
+        additions = ("ln(-x^2-1)-ln(x^2+1)",
+                     "ln(-x^2-x-1)-ln(-x^2-x-1)",
+                     "0*ln(-x^2-x-1)", "0*ln(x)", "x/x-1",
+                     "0*sqrt(x)", "0*x^(-2)", "0*x^0.5",
+                     "0*exp(ln(-x^2-x-1))", "sqrt(-1)^2+1")
+        for addition in additions:
+            with self.subTest(addition=addition):
+                result = grade("x^2+x+C+" + addition, question)
+                self.assertIn(result["verdict"], ("invalid", "incorrect"))
+                self.assertFalse(result["answer_complete"])
+
+    def test_unknown_domain_is_ungraded_even_after_cancellation(self):
+        result = grade("x^2+x+C+0*tan(x)", QUESTIONS["basic_foundation"])
+        self.assertEqual(result["verdict"], "ungraded")
+        self.assertFalse(result["answer_complete"])
+
+    def test_domain_restricted_question_requires_interval_contract(self):
+        question = {"kind": "indefinite", "integrand": "1/x", "answer": "ln(x)+C"}
+        result = grade(question["answer"], question)
+        self.assertEqual(result["verdict"], "ungraded")
+        self.assertFalse(result["answer_complete"])
+
+    def test_numeric_literals_are_exact_before_any_ast_float_rounding(self):
+        cases = {"1.0000000000000001": sp.Rational(10000000000000001, 10**16),
+                 "1e-100": sp.Rational(1, 10**100), "0.125": sp.Rational(1, 8),
+                 ".5": sp.Rational(1, 2), "2.5E-2": sp.Rational(1, 40),
+                 "10000.": sp.Integer(10000)}
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertEqual(parse_expression(expression), expected)
+
+    def test_tiny_nonzero_errors_never_count_as_symbolic_equivalence(self):
+        question = QUESTIONS["substitution_transfer"]
+        for expression in ("1.0000000000000001*exp(x^2)/2+C",
+                           "exp(x^2)/2+C+1e-100*x"):
+            with self.subTest(expression=expression):
+                result = grade(expression, question)
+                self.assertEqual(result["verdict"], "incorrect")
+                self.assertFalse(result["answer_complete"])
+        self.assertEqual(grade("0.5*exp(x^2)+C", question)["verdict"], "correct")
+
+    def test_numeric_precision_bounds_fail_explicitly(self):
+        for expression in ("1e-400", "1e-101", "0e101", "0." + "0" * 40 + "1",
+                           "1.00000000000000000000000000000000000000001", "0x10", "1_000"):
+            with self.subTest(expression=expression):
+                with self.assertRaises(InputError):
+                    parse_expression(expression)
+                self.assertFalse(preview(expression)["valid"])
+        result = grade("exp(x^2)/2+C+1e-400*x", QUESTIONS["substitution_transfer"])
+        self.assertEqual(result["verdict"], "invalid")
+        self.assertFalse(result["answer_complete"])
 
     def test_missing_constant_is_mathematically_correct_but_incomplete(self):
         result = grade("exp(x^2)", QUESTIONS["substitution_diagnostic"])
@@ -126,8 +194,8 @@ class GraderTests(unittest.TestCase):
                 self.assertNotIn("&InvisibleTimes;", result["mathml"])
 
     def test_preview_never_grades_or_differentiates(self):
-        with patch("grader.grade", side_effect=AssertionError("grading is forbidden")), patch("grader.sp.diff", side_effect=AssertionError("differentiation is forbidden")):
-            result = preview("x^2+C")
+        with patch("grader.grade", side_effect=AssertionError("grading is forbidden")), patch("grader.sp.diff", side_effect=AssertionError("differentiation is forbidden")), patch("grader._real_domain_status", side_effect=AssertionError("domain grading is forbidden")):
+            result = preview("ln(x^2+x+1)+C")
         self.assertEqual(set(result), {"valid", "mathml"})
 
     def test_preview_invalid_contains_no_raw_html(self):
@@ -147,6 +215,21 @@ class GraderTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 parsed = json.loads(result.stdout)
                 self.assertTrue(parsed["valid"] if payload["operation"] == "preview" else parsed["answer_complete"])
+
+    def test_adversarial_math_in_real_subprocess_with_existing_deadline(self):
+        cases = [("ln(-x^2-x-1)+C", QUESTIONS["substitution_post_log"], "incorrect"),
+                 ("ln((x^2+x+1)^2)/2+C", QUESTIONS["substitution_post_log"], "correct"),
+                 ("1.0000000000000001*exp(x^2)/2+C", QUESTIONS["substitution_transfer"], "incorrect"),
+                 ("exp(x^2)/2+C+1e-400*x", QUESTIONS["substitution_transfer"], "invalid")]
+        for answer, question, verdict in cases:
+            with self.subTest(answer=answer):
+                payload = {"operation": "grade", "answer": answer, "question": question}
+                result = subprocess.run([sys.executable, str(ROOT / "grader.py")], input=json.dumps(payload),
+                                        text=True, encoding="utf-8", capture_output=True, timeout=4)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                parsed = json.loads(result.stdout)
+                self.assertEqual(parsed["verdict"], verdict)
+                self.assertEqual(parsed["answer_complete"], verdict == "correct")
 
 
 if __name__ == "__main__":

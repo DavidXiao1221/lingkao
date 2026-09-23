@@ -13,6 +13,12 @@ if ! .venv/bin/python -c "import sympy; assert sympy.__version__ == '1.14.0'" >/
   .venv/bin/python -m pip install -r requirements.txt
 fi
 if [ "${1:-}" = "--test" ]; then
-  exec .venv/bin/python -m unittest discover -s tests -v
+  .venv/bin/python -m unittest discover -s tests -v
+  if command -v node >/dev/null 2>&1; then
+    node tests/test_drafts.cjs
+  else
+    echo "未安装 Node.js，已跳过前端草稿回归；运行应用不需要 Node.js。"
+  fi
+  exit 0
 fi
 exec .venv/bin/python server.py "$@"

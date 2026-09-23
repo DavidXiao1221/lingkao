@@ -12,7 +12,7 @@ import sys
 import threading
 
 ROOT = Path(__file__).resolve().parent
-VERSION = '0.2-alpha.1'
+VERSION = '0.2-alpha.3'
 STATE_VERSION = 2
 COURSE = json.loads((ROOT / 'course.json').read_text(encoding='utf-8'))
 QUESTIONS = {q['id']: q for q in COURSE['questions']}
@@ -45,7 +45,7 @@ def new_state():
         'test_index': 0, 'main_index': 0, 'started': False,
         'completed': False, 'lesson_seen': False, 'active_foundation': False,
         'post_done': False, 'attempts': [], 'events': [], 'evidence': {},
-        'feedbacks': {}, 'question_started_at': None,
+        'feedbacks': {}, 'question_started_at': None, 'round_attempt_start': 0,
     }
 
 
@@ -215,8 +215,10 @@ def _answer(s, payload, skip=False):
     answer = payload.get('answer', '')
     if not isinstance(answer, str) or len(answer) > 180:
         raise ActionError('请填写180字以内的数学表达式。')
-    if not skip and len(previous) >= 10:
-        raise ActionError('本题已尝试10次，可以查看讲解或暂时跳过。')
+    round_records = [a for a in s['attempts'][s.get('round_attempt_start', 0):]
+                     if a['qid'] == q['id'] and a['course_version'] == COURSE['version']]
+    if not skip and len(round_records) >= 10:
+        raise ActionError('本轮这道题已尝试10次，可以查看讲解或暂时跳过；完成本轮后可重新练习。')
     result = ({'verdict': 'skipped', 'answer_complete': False, 'message': '已记录为暂时不会。'}
               if skip else isolated_grade(answer, q))
     if result.get('verdict') == 'invalid':
@@ -266,7 +268,8 @@ def _mutate(s, payload):
         if s['phase'] not in ('plan', 'report'):
             raise ActionError('请先返回训练安排。')
         if name == 'restart_training':
-            s.update(main_index=0, completed=False, lesson_seen=False, active_foundation=False, feedbacks={})
+            s.update(main_index=0, completed=False, lesson_seen=False, active_foundation=False,
+                     feedbacks={}, round_attempt_start=len(s['attempts']))
             event(s, 'training_restarted')
         elif s['completed']:
             raise ActionError('本轮训练已完成，可以复测或选择再练一次。')
@@ -328,6 +331,7 @@ def _mutate(s, payload):
             raise ActionError('已经在基础补练中。')
         if s['stage'] != 'lesson':
             evidence(s, s['qid'])['help_used'] = True
+            evidence(s, s['qid'])['foundation_viewed'] = True
             event(s, 'foundation_help_used', qid=s['qid'])
         s['active_foundation'] = True
         _activate(s, COURSE['foundation']['question_id'], 'foundation')
@@ -401,6 +405,16 @@ def _report(s):
         q = QUESTIONS[qid]
         records = _records(s, qid)
         first, latest = records[0], records[-1]
+        help_record = _read_evidence(s, qid)
+        help_summary = []
+        if help_record.get('hints'):
+            help_summary.append(f"查看了{len(help_record['hints'])}层提示")
+        for field, label in (('example_viewed', '回看标准示范'), ('solution_viewed', '查看完整讲解'),
+                             ('chat', '使用预设答疑'), ('foundation_viewed', '进入基础补练')):
+            if help_record.get(field):
+                help_summary.append(label)
+        if help_record.get('help_used') and not help_summary:
+            help_summary.append('使用过辅助')
         phase = q['phase']
         counters[phase] = counters.get(phase, 0) + 1
         rows.append({
@@ -408,8 +422,15 @@ def _report(s):
             'formula_html': q['formula_html'], 'first_outcome': first['outcome'],
             'latest_outcome': latest['outcome'], 'answer': latest['answer'],
             'attempt_count': len(records), 'assisted': any(a['assisted'] for a in records),
+            'help_used': bool(help_record.get('help_used')), 'help_summary': help_summary,
             'independent_complete': first['independent_complete'],
             'answer_html': q['answer_html'],
+            'attempts': [{
+                'number': index, 'answer': record['answer'],
+                'outcome': record['outcome'], 'assisted': record['assisted'],
+                'independent_complete': record['independent_complete'],
+                'hints_used': record['hints_used'],
+            } for index, record in enumerate(records, 1)],
         })
     post = _summary(s, COURSE['post_order'])
     if post['independent_complete'] == post['total']:
@@ -433,7 +454,7 @@ def public(s):
         'instance_id': s['instance_id'], 'question': None,
         'progress': {'current': 0, 'total': len(COURSE['training_order']), 'label': '单元训练'},
         'stage': s['stage'] if not assessing else None,
-        'feedback': None, 'hints': [], 'hint_count': 0, 'help_used': False,
+        'feedback': None, 'last_answer': None, 'hints': [], 'hint_count': 0, 'help_used': False,
         'chat': [], 'lesson': None, 'solution': None, 'foundation_info': None,
         'plan': None, 'report': None,
     }
@@ -452,6 +473,12 @@ def public(s):
                          help_used=bool(e.get('help_used') or e.get('answer_exposed')),
                          feedback=copy.deepcopy(s['feedbacks'].get(q['id'])),
                          chat=copy.deepcopy(e.get('chat', [])))
+            # Restore only a submission from this training round. Restart clears
+            # feedback; assessments never receive prior answers or verdicts.
+            if s['stage'] != 'lesson' and value['feedback'] is not None:
+                records = _records(s, q['id'])
+                if records:
+                    value['last_answer'] = records[-1]['answer']
             if s['stage'] == 'lesson' or e.get('example_viewed'):
                 value['lesson'] = _lesson()
             if e.get('solution_viewed'):

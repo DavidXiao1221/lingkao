@@ -30,6 +30,13 @@ pause
 exit /b %LINGKAO_EXIT%
 :tests
 .venv\Scripts\python.exe -m unittest discover -s tests -v
+if errorlevel 1 exit /b %ERRORLEVEL%
+where node >nul 2>&1
+if errorlevel 1 (
+  echo 未安装 Node.js，已跳过前端草稿回归；运行应用不需要 Node.js。
+  exit /b 0
+)
+node tests\test_drafts.cjs
 exit /b %ERRORLEVEL%
 :missing_python
 echo 请先安装 Python 3.10 或更新版本，并启用添加至 PATH。
