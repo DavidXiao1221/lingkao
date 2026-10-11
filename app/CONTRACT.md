@@ -1,3 +1,104 @@
+# v0.3-alpha.1 implementation contract
+
+Application/course release: `0.3-alpha.1`; persisted state version: `3`; export format version: `3`. The eight mathematically unchanged v0.2 questions retain question version `0.2-alpha.1`. Question identity, practice run, assessment run, active instance, and page position are separate concepts. Historical answers keep their original grader version and verdict.
+
+## Content and public state
+
+`course.json` contains `{id, version, title, scope, school, term, applicability, source_priority, sources, units, foundation, questions}`. `units[]` use `basic`, `substitution`, `parts`, `definite`, with a lesson/example, prerequisites and four explicit role orders. Each unit has 1 diagnostic, 4 practice, 2 post and 1 delayed question. Questions add stable opaque `ref`, per-question `version`, `title`, `difficulty`, `minutes`, `pool` and `source_refs` to the previous mathematical schema. Definite questions include `lower` and `upper`.
+
+`pool` is `practice`, `diagnostic`, `post` or `delayed`; practice `phase` is guided or transfer. Only 16 practice summaries are available through catalog, filters or selection. Assessment pools and their future formulas/answers are never sent in bulk. Sources in this release are all original: no school-specific frequency, score weight or exam probability is inferred.
+
+The v3 state response contains:
+
+- `version`, `revision`, `participant`, `csrf`, `phase`, `minutes`, `course`, `legacy_mode`.
+- `instance_id`, `run_id`, `question`, `progress`, `feedback`, `last_answer`, `hints`, `hint_count`, `help_used`, `chat`, `lesson`, `solution`.
+- `catalog` with practice summaries, skill availability, `diagnostic_state` and `diagnostic_label`; `recommendation`, `review`, `budget`; `report` only on the report page.
+- `assessment` for the active assessment; `export_allowed`; `legacy_drafts` for exact browser-key mappings.
+- `ai_enabled`, `ai_request`, `ai_limits`; service configuration fills AI availability and quota values. Availability means configured, not verified with the provider.
+
+V3 phases are `setup`, `catalog`, `training`, `assessment`, `review`, `report`. An active question uses its opaque reference, question version and per-run id; re-entering can rotate the opaque instance without destroying its evidence or draft. Question status codes are `unseen`, `in_progress`, `needs_review`, `assisted`, `retry_complete`, `independent`, `ungraded`. Assistance on later attempts does not overwrite a genuinely independent first attempt.
+
+While assessing, state excludes catalog, recommendation, review, budget, hints, chat, lesson, solution, report, last submitted answer and current verdict. The current question title is generic. Only the displayed question is marked seen; abandoning an assessment never restores its unseen status. Model context is never built for assessment questions.
+
+## HTTP and actions
+
+All POST routes require JSON, the current session Cookie and `X-CSRF-Token`; body limit is 16,000 bytes. State mutations require matching integer `revision`. Current-question actions also require the current `instance_id`. Successful actions return updated state; stale revision/instance or conflicting SQLite snapshot returns `409`, invalid action/input generally `422`, session/CSRF failures `403`. Failed mutations do not persist partial state.
+
+| Route | Request / result |
+|---|---|
+| `GET /api/state` | Creates/restores the local session; returns the current public state. Supported migration and expired AI cleanup may be persisted during the read. |
+| `GET /api/catalog` | Existing session required; returns practice summaries and skill metadata only. Returns `409` during an assessment. |
+| `POST /api/action` | `{action, revision, instance_id?, ...}`; actions below. |
+| `POST /api/preview` | `{instance_id, expression}`; no revision required. Parse-only result `{valid:true,mathml}` or `{valid:false,message}`, maximum 180 characters. Available for the current training/assessment instance. |
+| `POST /api/tutor` | `{revision, instance_id, message}`; validates and durably reserves quota, returns `202` with pending public state. Poll `/api/state` for completion. |
+| `GET /api/export` | Export-local references and happened records only; `409` during any active assessment. No credentials, unpublished answers or browser drafts. |
+| `POST /api/reset` | `{revision}`; replace current participant/state and rotate CSRF while retaining the Cookie session id; refuses a pending AI request. |
+| `GET /api/health` | `{ok,version,ai_enabled,local_only}`; no provider request. |
+
+V3 actions:
+
+| Action | Additional fields and behavior |
+|---|---|
+| `start` | `minutes` integer 15–240; optional `diagnostic:true` begins the four-question diagnostic, otherwise opens catalog. |
+| `budget` | `minutes` integer 15–240; updates the current plan. Optional `new_session:true` starts a fresh time budget without clearing learning evidence. |
+| `select` | `question_ref` from the public practice catalog. Does not permit reserved-question selection. |
+| `catalog`, `review`, `report` | Navigate without resetting practice evidence. Opening report records exposure of reference answers for attempted questions. |
+| `answer`, `skip` | `answer` for answer; record current question submission, or skip. Invalid syntax does not append an attempt. Assessment advances without interim grading feedback. |
+| `next` | From feedback, move to another recommended practice question. |
+| `restart_question` | Begin a new run of only the current practice question; retain all historical evidence. |
+| `knowledge`, `hint`, `example`, `solution` | Reveal the requested teaching material and record assistance. |
+| `preset` | `message` matching a supported preset; offline assistance. |
+| `foundation`, `return_training` | Visit the basic practice question and return to the saved original question. |
+| `diagnostic` | Optional `skill`; otherwise use all still-unseen diagnostic questions. |
+| `assess` | `skill`, `mode:post` or `mode:delayed`; requires pool availability. |
+| `end_assessment` | Explicitly end the active assessment; no invented answer for the unfinished item. |
+| `cancel_ai` | Matching `request_id`; cancel local waiting and reject any later result. |
+
+All mutations use revision checks. `answer`, `skip`, `next`, `restart_question`, teaching actions, foundation navigation and `end_assessment` require instance matching. Navigating, selecting, budgeting or starting assessment from training also requires the current instance. In assessment only answer, skip and explicit end are allowed. Legacy actions remain handled only for frozen v2 sessions; compatibility aliases in the engine are not new client API entrypoints.
+
+## Evidence, scheduling and persistence
+
+Each practice run has its own 10-valid-submission allowance, hints, chat and feedback. Lifetime attempts and question-version evidence survive restarts. Missing an independent `+C` gives mathematical verdict correct but normalized outcome incomplete; retries cannot rewrite the original attempt. Unsupported equivalence/domain proofs are ungraded, never counted as wrong. Preview has no grading or domain-solving side effect.
+
+Recommendations are deterministic: resume unfinished work, address latest assessment gaps or lack of independent evidence, respect basic prerequisites, then cover untested areas and consolidate. Same-priority work uses source priority, estimated duration and stable course ordering. Only original content exists now. Unknown outcomes are separately identified. Students can choose any public practice question.
+
+Budget is 15–240 estimated minutes, charged once per question per practice/assessment run rather than wall time. A full plan reserves post-test time for selected skills and a summary; a short plan is explicit if that does not fit. It is not an examination score or completion guarantee.
+
+Immediate post assessment requires two distinct practice questions in that skill to have valid attempt records, or an independently complete diagnostic result. Each skill has two reserved post questions. Delayed assessment unlocks 24 hours after the first completed post run and uses one reserved question. A delivered/assisted/attempted/exposed question is not unseen. Repeating an original practice never replenishes assessment pools.
+
+SQLite `sessions` stores serialized snapshots; save is a conditional update on session id and the exact bytes read. Local locks and cross-process compare-and-swap prevent stale writes. Math workers and provider calls do not hold a SQLite transaction; provider network calls also do not hold session locks. Default database is `app/data/lingkao-alpha.sqlite3`; override using `LINGKAO_DB_PATH`, preferably an absolute path. Cookie name remains `lingkao_alpha_session` and is not port-isolated.
+
+V2 migration is idempotent and does not regrade. It preserves identity, attempts, original grader verdicts, evidence and exposure; matches only unchanged mathematical questions. Unknown historical records are read-only. An in-progress v2 diagnostic/post remains on `legacy_engine.py` plus `legacy_course.json` until complete or explicitly ended; only then does it migrate. Stop old processes before upgrading; rollback uses a pre-upgrade backup, not the migrated database.
+
+Drafts stay in localStorage under participant + question reference + question version + run id, with independent edit ids and revision conflict markers. Successful submit invalidates only its captured edit; one question restart does not delete other question drafts. Same-question interrupted input can be restored; other conflict copies are copy-only in sessionStorage. Storage failure warns without blocking work. Exact v2 key mappings migrate old drafts; unmapped drafts remain copyable instead of being inserted into a different question. Drafts are not exportable learning evidence.
+
+## AI lifecycle and configuration
+
+`ai_tutor.py` calls `https://api.deepseek.com/chat/completions` with server-only key, configurable model (default `deepseek-flash`), `stream:false`, `max_tokens:1000`, and `thinking:{type:disabled}`. It uses only known keys from `app/.env`, with process environment taking precedence. Empty key disables online calls; `.env.example` carries no secret.
+
+Input is 1–600 characters. Context is limited to the current practice's expression, definite bounds where applicable, reviewed answer/steps, related knowledge, recent submission and latest six chat messages. No full catalog, future assessment content or other student's data. Replies are plain text, not executed HTML; the model never assigns verdicts or mutates the plan.
+
+AI request statuses are `pending`, `completed`, `failed`, `cancelled`, `expired`. While pending, the frontend permits draft editing, preview and polling; server mutations are locked except `cancel_ai`. Pending requests bind participant, course, question version, instance and run. Changed identity, cancellation, timeout or late provider completion cannot apply a stale reply. Successful saved replies alone add assistance; failures do not reduce prior independent evidence.
+
+Default deadline is 45 seconds; no automatic retry. Restart does not reissue a pending request; expiry unblocks the session. Cancellation ends local waiting but cannot guarantee provider cancellation. State and quota reservation use one atomic transaction before launching the worker. Durable tables `ai_participants`, `ai_daily`, `ai_reservations` enforce defaults of 30 calls per anonymous participant, 100 per database per UTC day and 2 in flight, with minimum four seconds between participant requests. Accepted failures/cancellations remain charged. Separate databases have separate limits; clearing a participant does not reset the database daily total.
+
+Configuration names: `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `LINGKAO_AI_PARTICIPANT_LIMIT`, `LINGKAO_AI_DAILY_LIMIT`, `LINGKAO_AI_CONCURRENCY`, `LINGKAO_AI_TIMEOUT_SECONDS`. Out-of-range limits fail configuration validation. Provider errors are sanitized; keys and raw provider error bodies are not returned to clients.
+
+Only mocked-provider validation is included in this delivery; live four-skill DeepSeek acceptance remains unverified without a valid configured key. Test counts, browser acceptance and remaining limitations are maintained in [QA.md](QA.md).
+
+## Archived v0.2 contract
+
+The following frozen notes document the previous release and its compatibility engine. They do not describe v3 catalog, AI, state or draft behavior.
+
+
+### 新一次时间安排
+
+`budget` 可选 `new_session: true`；只有 JSON 布尔值 true 会清零本次估时并允许题目在本次再次计时。普通修改分钟数保留已用估时。两种操作都保留题目／练习轮次、草稿定位、原始作答、辅助及暴露历史；测评中和 AI 等待中不可执行。
+
+
+<details>
+<summary>v0.2-alpha.3 contract (historical)</summary>
+
 # v0.2-alpha.3 implementation contract
 
 Application release version is 0.2-alpha.3; course version remains 0.2-alpha.1 and stored state version remains 2 so prior sessions keep their evidence and cursor. Historical attempts retain their recorded grader version and verdict; upgrading does not regrade them.
@@ -33,3 +134,5 @@ All successful mutations return state. GET /api/state returns state. GET /api/ex
 Export format version 2 replaces all internal qid fields and course-version-plus-qid evidence keys with export-local question_ref values, user-readable question_label and course_version. Attempts, evidence and question-associated events use the same reference within one export. Current labels follow configured order (诊断1、引导练习1、独立变式1、基础补练1、独立复测1); only happened records are included, with no unvisited-question catalog. Historical course versions or unknown historical questions use 历史题目N labels without looking up current answers. Export is read-only and remains available for version-mismatched records outside assessment phases.
 
 Every delivered question has an opaque instance persisted on refresh; switching/re-entering rotates it. Persistent evidence keyed by course version + qid survives instances. Invalid syntax never appends an attempt. +C missing => verdict correct, answer_complete false, normalized incomplete, retry allowed but first attempt remains incomplete. Attempts count skipping and ungraded; preview does not count. Successful answer/hint etc increments revision so duplicate concurrent old POST is rejected. Return to plan preserves main cursor and foundation substate; resuming restores question without erasing help. Explicit restart starts main sequence with retained evidence. Foundation doesn't advance main sequence or independent counts. Training completion means flow completed, not mastery.
+
+</details>

@@ -6,3 +6,4 @@ data/*.sqlite3*
 data/*.db*
 .env
 .env.*
+!.env.example

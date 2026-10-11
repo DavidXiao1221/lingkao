@@ -9,6 +9,7 @@ const vm = require('node:vm');
 const {randomUUID} = require('node:crypto');
 const source = fs.readFileSync(path.resolve(__dirname, '../web/app.js'), 'utf8');
 const withoutBoot = source.slice(0, source.lastIndexOf('\n(async () =>'));
+const viewsSource = fs.readFileSync(path.resolve(__dirname, '../web/views.js'), 'utf8');
 
 function storage() {
   const values = new Map();
@@ -50,12 +51,18 @@ function tab(value, shared = storage(), session = storage()) {
   Object.defineProperty(app, 'innerHTML', {
     set(html) {
       elements.delete('#answer');
+      elements.delete('#aiMessage');
       if (html.includes('id="answer"')) {
         const input = element();
         input.dataset.instance = html.match(/data-instance="([^"]+)"/)[1];
         input.dataset.draftKey = html.match(/data-draft-key="([^"]+)"/)[1];
         input.readOnly = /maxlength="180" readonly/.test(html);
         elements.set('#answer', input);
+      }
+      if (html.includes('id="aiMessage"')) {
+        const input = element();
+        input.disabled = /<textarea[^>]*id="aiMessage"[^>]*\bdisabled(?:\s|>)/.test(html);
+        elements.set('#aiMessage', input);
       }
       for (const id of ['#draftStatus', '#draftRecoveries', '#previewMath', '#previewStatus', '#answerError', '#busyText']) elements.set(id, element());
     },
@@ -310,6 +317,98 @@ async function check(name, fn) {
     const markup = next.elements.get('#draftRecoveries').innerHTML;
     assert.match(markup, /my expression/);
     assert.doesNotMatch(markup, /restore_draft|参考结果|正确答案|讲解/);
+  });
+  await check('stable question drafts survive reordered lists and rotated instances', () => {
+    const question = {kind: 'indefinite', formula_html: '<math/>', ref: 'opaque-one', version: '1', run_id: 'run-one'};
+    const a = tab(state(4, {question}));
+    a.type('x^3/3+C');
+    const b = tab(state(5, {question, instance_id: 'new-instance', progress: {current: 8, total: 16}, stage: 'transfer'}), a.shared);
+    assert.equal(b.input.value, 'x^3/3+C');
+    assert.equal(a.run('draftKey()'), b.run('draftKey()'));
+    const c = tab(state(6, {question: {...question, ref: 'opaque-two'}, progress: {current: 8, total: 16}}), a.shared);
+    assert.equal(c.input.value, '');
+  });
+  await check('restarting one question isolates its new round without erasing other drafts', async () => {
+    const q1 = {kind: 'indefinite', formula_html: '<math/>', ref: 'one', version: '1', run_id: 'round-one'};
+    const q2 = {...q1, ref: 'two'};
+    const a = tab(state(4, {question: q1}));
+    a.type('one-answer');
+    const b = tab(state(4, {question: q2}), a.shared);
+    b.type('two-answer');
+    const pending = a.run("runAction('restart_question')");
+    a.respond(state(5, {question: {...q1, run_id: 'round-two'}, instance_id: 'fresh-instance'}));
+    await pending;
+    assert.equal(a.input.value, '');
+    assert.equal(tab(state(5, {question: q2}), a.shared).input.value, 'two-answer');
+  });
+  await check('legacy mapping moves only the matching draft and never overwrites a newer one', () => {
+    const old = tab(state(4, {course: {version: '0.2-alpha.1'}}));
+    old.type('old-expression');
+    const oldKey = old.run('draftKey()');
+    const q = {kind: 'indefinite', formula_html: '<math/>', ref: 'mapped', version: '0.2-alpha.1', run_id: 'legacy-run'};
+    const mapping = {old_key_suffix: '0.2-alpha.1:training:guided:1', question_ref: q.ref, question_version: q.version, run_id: q.run_id};
+    const migrated = tab(state(5, {question: q, legacy_drafts: [mapping]}), old.shared);
+    assert.equal(migrated.input.value, 'old-expression');
+    migrated.type('new-expression');
+    assert.equal(tab(state(5, {question: q, legacy_drafts: [mapping]}), old.shared).input.value, 'new-expression');
+    assert.equal(migrated.run(`getDraft(${JSON.stringify(oldKey)})`), null);
+  });
+  await check('new views escape question names and AI HTML rather than executing markup', () => {
+    const a = tab(state(4, {question: {kind: 'indefinite', formula_html: '<math/>', ref: 'one', version: '1', run_id: 'r', title: '<img src=x onerror=alert(1)>', skill: 'basic'}, chat: [{role: 'assistant', mode: 'ai', content: '<script>bad()</script>'}]}));
+    a.run(fs.readFileSync(path.resolve(__dirname, '../web/views.js'), 'utf8'));
+    a.run('tutorOpen = true');
+    const html = a.run('v3Training()');
+    assert.doesNotMatch(html, /<script>|<img src=x/);
+    assert.match(html, /&lt;script&gt;/);
+    assert.match(html, /&lt;img/);
+  });
+  await check('failed, incomplete and ungraded rounds offer an enabled restart without hiding retry', () => {
+    const question = {kind: 'indefinite', formula_html: '<math/>', ref: 'retryable', version: '1', run_id: 'capped-round', skill: 'basic'};
+    for (const feedback of [
+      {verdict: 'incorrect', answer_complete: false, message: '结果尚未通过'},
+      {verdict: 'correct', answer_complete: false, constant_missing: true, message: '缺少积分常数'},
+      {verdict: 'ungraded', answer_complete: false, message: '待核对'},
+    ]) {
+      const a = tab(state(4, {question, feedback}));
+      a.run(viewsSource);
+      const html = a.run('v3Training()');
+      assert.match(html, /data-action="answer"/);
+      const restart = html.match(/<button[^>]*data-action="restart_question"[^>]*>/);
+      assert.ok(restart, 'A capped failed round needs a visible way to start another round.');
+      assert.doesNotMatch(restart[0], /\bdisabled/);
+    }
+  });
+  await check('keyboard submission during AI pending sends no request and keeps the editable answer draft', () => {
+    const question = {kind: 'indefinite', formula_html: '<math/>', ref: 'ai-pending', version: '1', run_id: 'round', skill: 'basic'};
+    const a = tab(state(4, {question, ai_request: {id: 'in-flight', status: 'pending'}}));
+    a.run(viewsSource);
+    a.type('x^3/3+C');
+    const originalId = a.input.dataset.draftId;
+    // Enter uses this same entry point even though the submit button is disabled.
+    a.run('submitAnswer()');
+    assert.equal(a.requests.length, 0);
+    assert.equal(a.input.readOnly, false);
+    assert.equal(a.input.value, 'x^3/3+C');
+    assert.equal(a.run('getDraft(draftKey()).answer'), 'x^3/3+C');
+    assert.equal(a.input.dataset.draftId, originalId);
+    assert.match(a.elements.get('#toast').textContent, /等待|取消|AI/);
+  });
+  await check('AI question drafts survive rerenders and question switching in memory when browser storage is blocked', () => {
+    const unavailable = {getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); }, get length() { throw Error('blocked'); }};
+    const question = {kind: 'indefinite', formula_html: '<math/>', ref: 'ai-one', version: '1', run_id: 'round-one', skill: 'basic'};
+    const a = tab(state(4, {version: '0.3-alpha.1', question, ai_enabled: true}), unavailable, unavailable);
+    a.run(viewsSource);
+    a.run('tutorOpen = true; render();');
+    a.elements.get('#aiMessage').value = '这一步为什么要除以 3？';
+    a.run('saveAIInput(); workTab = "knowledge"; render();');
+    assert.equal(a.elements.get('#aiMessage').value, '这一步为什么要除以 3？');
+    assert.equal(a.run('readAIDraft(aiDraftKey()).message'), '这一步为什么要除以 3？');
+    a.run('state.question = {...state.question, ref: "ai-two", run_id: "round-two"}; render();');
+    assert.equal(a.elements.get('#aiMessage').value, '');
+    a.elements.get('#aiMessage').value = '第二题的独立草稿';
+    a.run('saveAIInput(); state.question = {...state.question, ref: "ai-one", run_id: "round-one"}; render();');
+    assert.equal(a.elements.get('#aiMessage').value, '这一步为什么要除以 3？');
+    assert.equal(a.requests.length, 0, 'Saving and restoring AI drafts must never call the model.');
   });
   console.log(`Draft regressions: ${passed} passed.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

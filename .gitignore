@@ -18,10 +18,12 @@ __pycache__/
 # Local configuration and credentials
 .env
 .env.*
+!app/.env.example
 *.env
 
 # Learning records and database sidecars
 app/data/
+.*.ai-workers/
 *.sqlite
 *.sqlite-*
 *.sqlite3

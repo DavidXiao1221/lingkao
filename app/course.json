@@ -1,56 +1,333 @@
 {
-  "id": "calculus-substitution",
-  "version": "0.2-alpha.1",
-  "title": "临考 · 换元积分训练",
-  "scope": "先验证一个换元积分单元的训练效果；本轮诊断和复测不检验混合题型识别，也不预测考试分数。",
-  "unit": {
-    "id": "substitution",
-    "name": "换元积分",
-    "goal": "识别内层函数与它的导数，调整系数，独立写出完整原函数。",
-    "minutes": 25,
-    "rule": "先找内层函数 g(x)，再检查旁边有没有 g′(x) 或它的常数倍；把这一部分连同 dx 整体替换成 du。",
-    "boundary": "看到乘积不一定就能直接换元。必须核对导数和系数；换元后不能混用 x 与 u；不定积分最后加 C。",
-    "knowledge": [
-      {
-        "title": "换元的依据",
-        "text": "链式法则：(F(g(x)))′=F′(g(x))g′(x)。积分时反过来使用：设 u=g(x)，把 g′(x)dx 整体替换为 du。"
-      },
-      {
-        "title": "系数匹配",
-        "text": "例如 u=x² 时，du=2x dx；如果题目只有 x dx，应换成 du/2。常数倍可以提出积分号。"
-      },
-      {
-        "title": "幂函数公式",
-        "text": "∫uⁿ du=uⁿ⁺¹/(n+1)+C，n≠−1；特别地，∫u² du=u³/3+C，∫u du=u²/2+C。"
-      },
-      {
-        "title": "指数与三角公式",
-        "text": "∫exp(u) du=exp(u)+C；∫cos(u) du=sin(u)+C；∫sin(u) du=−cos(u)+C。其中 exp(u) 表示 e 的 u 次方。"
-      },
-      {
-        "title": "对数公式",
-        "text": "∫1/u du=ln|u|+C（u≠0）。内层函数恒为正时可直接写 ln(u)。本单元需提交的对数答案均具有正的内层表达式。"
-      },
-      {
-        "title": "写完整并检查",
-        "text": "把 u 全部换回 x，最后加独立的积分常数 +C。再对结果求导，用链式法则检查是否回到原被积式。"
-      }
-    ],
-    "example": {
-      "kind": "indefinite",
-      "integrand": "2*x*cos(x^2)",
-      "answer": "sin(x^2)+C",
-      "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow></math>",
-      "steps": [
-        "设 u=x²，则 du=2x dx。",
-        "原式化为 ∫cos(u) du=sin(u)+C。",
-        "把 u 换回 x²，得到 sin(x²)+C。",
-        "求导检查：sin(x²) 的导数是 cos(x²)×2x，与原被积式一致。"
-      ],
-      "plain": "2*x*cos(x^2)"
+  "id": "calculus-integrals",
+  "version": "0.3-alpha.1",
+  "title": "临考 · 通用积分训练",
+  "scope": "覆盖基本积分、换元积分、分部积分和定积分计算；按作答证据安排练习。当前未匹配任何学校或学期资料，不推测考试频次、必考内容或考试分数。",
+  "school": null,
+  "term": null,
+  "applicability": "通用高等数学积分基础；以今年课程考试范围为准。",
+  "source_priority": [
+    "past_exam",
+    "assignment",
+    "slides",
+    "textbook",
+    "original"
+  ],
+  "sources": [
+    {
+      "id": "original-v02",
+      "type": "original",
+      "title": "临考通用训练 v0.2 原创题",
+      "description": "临考编写的训练题；不是任何高校真题。",
+      "school": null,
+      "term": null
+    },
+    {
+      "id": "original-v03",
+      "type": "original",
+      "title": "临考通用积分训练 v0.3 原创题",
+      "description": "临考编写的训练题；不是任何高校真题。",
+      "school": null,
+      "term": null
     }
-  },
+  ],
+  "units": [
+    {
+      "id": "basic",
+      "name": "基本积分",
+      "goal": "按项选择基本积分公式，保留系数与符号，并写出积分常数。",
+      "minutes": 20,
+      "rule": "先看加减项，再按幂函数、指数函数和三角函数分别积分；每一项都用求导检查。",
+      "boundary": "加减项可以分别积分，乘积不能直接拆成两个积分相乘；不定积分最后加独立的 C。",
+      "prerequisites": [],
+      "knowledge": [
+        {
+          "title": "积分的线性",
+          "text": "∫(af(x)+bg(x))dx=a∫f(x)dx+b∫g(x)dx。合并原函数时只需保留一个任意常数。"
+        },
+        {
+          "title": "幂函数与常数",
+          "text": "∫xⁿ dx=xⁿ⁺¹/(n+1)+C（n≠−1）；∫1 dx=x+C。本题单基本积分中的幂次均为非负整数。"
+        },
+        {
+          "title": "指数函数",
+          "text": "∫exp(x)dx=exp(x)+C。exp(x) 表示 e 的 x 次方；复合指数要额外核对内层导数。"
+        },
+        {
+          "title": "三角函数与符号",
+          "text": "∫cos(x)dx=sin(x)+C；∫sin(x)dx=−cos(x)+C。可以通过求导反查负号。"
+        },
+        {
+          "title": "完整结果",
+          "text": "原函数求导正确还不等于不定积分书写完整；最终保留任意常数 +C。"
+        }
+      ],
+      "example": {
+        "kind": "indefinite",
+        "integrand": "x^2+sin(x)",
+        "answer": "x^3/3-cos(x)+C",
+        "steps": [
+          "按加法拆成 ∫x² dx+∫sin(x) dx。",
+          "幂函数积分为 x³/3，正弦积分为 −cos(x)。",
+          "合并得到 x³/3−cos(x)+C。",
+          "求导为 x²+sin(x)，与题目一致。"
+        ],
+        "plain": "x^2+sin(x)",
+        "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+        "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mi>x</mi><mn>3</mn></msup><mn>3</mn></mfrac></mrow><mo>-</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math>",
+        "source": "临考编写的训练题；不是任何高校真题。",
+        "source_refs": [
+          {
+            "source_id": "original-v03",
+            "locator": "完整示范"
+          }
+        ]
+      },
+      "diagnostic_order": [
+        "basic_diagnostic"
+      ],
+      "training_order": [
+        "basic_foundation",
+        "basic_guided_exponential",
+        "basic_transfer_polynomial",
+        "basic_transfer_trig"
+      ],
+      "post_order": [
+        "basic_post_polynomial",
+        "basic_post_exponential"
+      ],
+      "delayed_order": [
+        "basic_delayed"
+      ]
+    },
+    {
+      "id": "substitution",
+      "name": "换元积分",
+      "goal": "识别内层函数与它的导数，调整系数，独立写出完整原函数。",
+      "minutes": 25,
+      "rule": "先找内层函数 g(x)，再检查旁边有没有 g′(x) 或它的常数倍；把这一部分连同 dx 整体替换成 du。",
+      "boundary": "看到乘积不一定就能直接换元。必须核对导数和系数；换元后不能混用 x 与 u；不定积分最后加 C。",
+      "knowledge": [
+        {
+          "title": "换元的依据",
+          "text": "链式法则：(F(g(x)))′=F′(g(x))g′(x)。积分时反过来使用：设 u=g(x)，把 g′(x)dx 整体替换为 du。"
+        },
+        {
+          "title": "系数匹配",
+          "text": "例如 u=x² 时，du=2x dx；如果题目只有 x dx，应换成 du/2。常数倍可以提出积分号。"
+        },
+        {
+          "title": "幂函数公式",
+          "text": "∫uⁿ du=uⁿ⁺¹/(n+1)+C，n≠−1；特别地，∫u² du=u³/3+C，∫u du=u²/2+C。"
+        },
+        {
+          "title": "指数与三角公式",
+          "text": "∫exp(u) du=exp(u)+C；∫cos(u) du=sin(u)+C；∫sin(u) du=−cos(u)+C。其中 exp(u) 表示 e 的 u 次方。"
+        },
+        {
+          "title": "对数公式",
+          "text": "∫1/u du=ln|u|+C（u≠0）。内层函数恒为正时可直接写 ln(u)。本单元需提交的对数答案均具有正的内层表达式。"
+        },
+        {
+          "title": "写完整并检查",
+          "text": "把 u 全部换回 x，最后加独立的积分常数 +C。再对结果求导，用链式法则检查是否回到原被积式。"
+        }
+      ],
+      "example": {
+        "kind": "indefinite",
+        "integrand": "2*x*cos(x^2)",
+        "answer": "sin(x^2)+C",
+        "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+        "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>)</mo></mrow></mrow></mrow></math>",
+        "steps": [
+          "设 u=x²，则 du=2x dx。",
+          "原式化为 ∫cos(u) du=sin(u)+C。",
+          "把 u 换回 x²，得到 sin(x²)+C。",
+          "求导检查：sin(x²) 的导数是 cos(x²)×2x，与原被积式一致。"
+        ],
+        "plain": "2*x*cos(x^2)",
+        "source": "临考编写的训练题；不是任何高校真题。",
+        "source_refs": [
+          {
+            "source_id": "original-v02",
+            "locator": "换元积分 · 完整示范"
+          }
+        ]
+      },
+      "prerequisites": [
+        "basic"
+      ],
+      "diagnostic_order": [
+        "substitution_diagnostic"
+      ],
+      "training_order": [
+        "substitution_guided",
+        "substitution_guided_polynomial",
+        "substitution_transfer",
+        "substitution_transfer_trig"
+      ],
+      "post_order": [
+        "substitution_post",
+        "substitution_post_log"
+      ],
+      "delayed_order": [
+        "substitution_delayed"
+      ]
+    },
+    {
+      "id": "parts",
+      "name": "分部积分",
+      "goal": "选择 u 与 dv，处理分部公式的减号与系数，并在需要时连续分部。",
+      "minutes": 30,
+      "rule": "从乘积求导倒推：∫u dv=uv−∫v du。通常让多项式作 u，使它求导后更简单。",
+      "boundary": "分部后剩余积分应更简单；有复合指数或三角函数时先核对 v 的系数，不要漏掉外面的负号。",
+      "prerequisites": [
+        "basic"
+      ],
+      "knowledge": [
+        {
+          "title": "分部积分公式",
+          "text": "由 (uv)′=u′v+uv′ 得到 ∫u dv=uv−∫v du。确定 u 和 dv 后，要分别写清 du 和 v。"
+        },
+        {
+          "title": "怎样选择 u",
+          "text": "多项式乘指数或三角函数时，通常让多项式作 u。每次求导会降低其次数，便于计算剩余积分。"
+        },
+        {
+          "title": "剩余积分的符号",
+          "text": "uv 后面是减去整个 ∫v du。若 v 已带负号，应连同括号一起代入，避免丢失两个负号。"
+        },
+        {
+          "title": "连续分部",
+          "text": "遇到 x²exp(x) 等乘积，可以对剩余的 xexp(x) 再分部一次。每一步保留前面带出的系数。"
+        },
+        {
+          "title": "复合函数系数",
+          "text": "∫exp(ax)dx=exp(ax)/a+C；∫sin(ax)dx=−cos(ax)/a+C（a≠0）。求导时乘 a，所以积分时除以 a。"
+        },
+        {
+          "title": "乘积求导复查",
+          "text": "用乘积法则 (fg)′=f′g+fg′ 检查最终原函数。多余项应相互抵消，剩下题目的被积式。"
+        }
+      ],
+      "example": {
+        "kind": "indefinite",
+        "integrand": "x*exp(-x)",
+        "answer": "-(x+1)*exp(-x)+C",
+        "steps": [
+          "取 u=x、dv=exp(−x)dx，则 du=dx、v=−exp(−x)。",
+          "代入分部公式得 −xexp(−x)+∫exp(−x)dx。",
+          "结果为 −xexp(−x)−exp(−x)+C，即 −(x+1)exp(−x)+C。",
+          "求导得到 −exp(−x)+(x+1)exp(−x)=xexp(−x)。"
+        ],
+        "plain": "x*exp(-x)",
+        "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mfrac><mi>x</mi><msup><mi>ⅇ</mi><mi>x</mi></msup></mfrac></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+        "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><mrow><mrow><mo>-</mo><mi>x</mi></mrow><mo>-</mo><mn>1</mn></mrow><msup><mi>ⅇ</mi><mi>x</mi></msup></mfrac></mrow></mrow></math>",
+        "source": "临考编写的训练题；不是任何高校真题。",
+        "source_refs": [
+          {
+            "source_id": "original-v03",
+            "locator": "完整示范"
+          }
+        ]
+      },
+      "diagnostic_order": [
+        "parts_diagnostic"
+      ],
+      "training_order": [
+        "parts_guided",
+        "parts_guided_trig",
+        "parts_transfer_polynomial",
+        "parts_transfer_scaled"
+      ],
+      "post_order": [
+        "parts_post_trig",
+        "parts_post_repeated"
+      ],
+      "delayed_order": [
+        "parts_delayed"
+      ]
+    },
+    {
+      "id": "definite",
+      "name": "定积分计算",
+      "goal": "求原函数并准确代入上下限，结合换元、分部与对称性给出精确数值。",
+      "minutes": 25,
+      "rule": "在连续区间上先找原函数 F，再计算 F(b)−F(a)；是上限减下限，最终结果不带 C。",
+      "boundary": "此题单只含有限区间上的连续函数。定积分不总是几何面积；换元时同步改变上下限，或换回 x 后再代原限。",
+      "prerequisites": [
+        "basic"
+      ],
+      "knowledge": [
+        {
+          "title": "牛顿—莱布尼茨公式",
+          "text": "若 f 在 [a,b] 连续且 F′=f，则从 a 到 b 的定积分等于 F(b)−F(a)。求原函数后代入整个表达式。"
+        },
+        {
+          "title": "为什么不加 C",
+          "text": "上下限相减时任意常数抵消。最终提交确定的常数表达式，如 2/3、exp(1)−1、pi/2。"
+        },
+        {
+          "title": "对称区间",
+          "text": "奇函数在 [−a,a] 上的积分为 0；偶函数在该区间的积分等于从 0 到 a 的两倍。也可以直接求原函数复核。"
+        },
+        {
+          "title": "换元与积分限",
+          "text": "若设 u=g(x)，把积分整体改为 u 后，也要把上下限改为 g(a)、g(b)。∫g′(x)/g(x)dx=ln(g(x))+C 适用于这里 g 恒为正的题目。"
+        },
+        {
+          "title": "乘积与分部",
+          "text": "多项式乘指数函数可用 ∫u dv=uv−∫v du；有时直接反查乘积求导公式就能找到原函数。"
+        },
+        {
+          "title": "三角平方",
+          "text": "sin²(x)=(1−cos(2x))/2；cos²(x)=(1+cos(2x))/2。降幂后分别积分，注意 cos(2x) 积分时的 1/2。"
+        },
+        {
+          "title": "结果检查",
+          "text": "上限减下限的顺序不可反。非负函数在从小到大的区间上积分应非负；这些观察只能排错，不能代替计算。"
+        }
+      ],
+      "example": {
+        "kind": "definite",
+        "integrand": "x^2",
+        "answer": "7/3",
+        "steps": [
+          "取 F(x)=x³/3，求导得到 x²。",
+          "按上限减下限计算 F(2)−F(1)=8/3−1/3。",
+          "结果为 7/3，最终无需加积分常数。"
+        ],
+        "plain": "x^2",
+        "lower": "1",
+        "upper": "2",
+        "question_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>1</mn><mn>2</mn></msubsup><msup><mi>x</mi><mn>2</mn></msup><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+        "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mfrac><mn>7</mn><mn>3</mn></mfrac></math>",
+        "source": "临考编写的训练题；不是任何高校真题。",
+        "source_refs": [
+          {
+            "source_id": "original-v03",
+            "locator": "完整示范"
+          }
+        ]
+      },
+      "diagnostic_order": [
+        "definite_diagnostic"
+      ],
+      "training_order": [
+        "definite_guided",
+        "definite_guided_trig",
+        "definite_transfer_exponential",
+        "definite_transfer_symmetry"
+      ],
+      "post_order": [
+        "definite_post_substitution",
+        "definite_post_product"
+      ],
+      "delayed_order": [
+        "definite_delayed"
+      ]
+    }
+  ],
   "foundation": {
     "title": "基础补练：幂函数与常数",
     "knowledge": [
@@ -66,6 +343,271 @@
     "question_id": "basic_foundation"
   },
   "questions": [
+    {
+      "id": "basic_diagnostic",
+      "skill": "basic",
+      "phase": "diagnostic",
+      "kind": "indefinite",
+      "integrand": "3*x^2-2*sin(x)",
+      "answer": "x^3+2*cos(x)+C",
+      "hint_steps": [
+        "把多项式项和三角函数项分别积分。",
+        "sin(x) 的原函数是 -cos(x)；同时留意原式中的负号。"
+      ],
+      "solution_steps": [
+        "拆成 ∫3x² dx−2∫sin(x) dx。",
+        "由幂函数公式，第一项为 x³；第二项为 2cos(x)。",
+        "合并得到 x³+2cos(x)+C。",
+        "求导得到 3x²−2sin(x)，与原被积式一致。"
+      ],
+      "title": "幂函数与三角符号：起点检查",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "diagnostic",
+      "ref": "29604789e4ef31d12c3f",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 幂函数与三角符号：起点检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>-</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>3</mn></msup><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_foundation",
+      "skill": "basic",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "2*x+1",
+      "answer": "x^2+x+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "先把 2x 和常数 1 分别积分。",
+        "x 的积分是 x²/2，1 的积分是 x。",
+        "保留系数 2，合并两项，并加积分常数 C。"
+      ],
+      "solution_steps": [
+        "拆成 ∫2x dx+∫1 dx。",
+        "第一项为 2×x²/2=x²，第二项为 x。",
+        "合并并加常数，得到 x²+x+C。",
+        "求导得到 2x+1。补练结束后回到原来的训练位置。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi></mrow></math>",
+      "title": "一次多项式与积分常数",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.2-alpha.1",
+      "pool": "practice",
+      "ref": "b241b5cefcf26bf3a757",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "基本积分 · 一次多项式与积分常数"
+        }
+      ]
+    },
+    {
+      "id": "basic_guided_exponential",
+      "skill": "basic",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "exp(x)+cos(x)",
+      "answer": "exp(x)+sin(x)+C",
+      "hint_steps": [
+        "积分对加法是线性的，可以分成两项。",
+        "exp(x) 的原函数是自身，cos(x) 的原函数是 sin(x)。"
+      ],
+      "solution_steps": [
+        "拆成 ∫exp(x) dx+∫cos(x) dx。",
+        "分别得到 exp(x) 和 sin(x)。",
+        "合并并保留一个任意常数，结果为 exp(x)+sin(x)+C。",
+        "求导得到 exp(x)+cos(x)，检查通过。"
+      ],
+      "title": "指数与余弦分别积分",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "e0a4d2a0a66285590e99",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 指数与余弦分别积分"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><msup><mi>ⅇ</mi><mi>x</mi></msup><mo>+</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>ⅇ</mi><mi>x</mi></msup><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_transfer_polynomial",
+      "skill": "basic",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "4*x^3-6*x+2",
+      "answer": "x^4-3*x^2+2*x+C",
+      "hint_steps": [
+        "先把三项分开，常数系数保留在积分号外。",
+        "幂次加一后要除以新幂次；常数 2 的原函数不是 0。"
+      ],
+      "solution_steps": [
+        "按项积分：4∫x³ dx−6∫x dx+2∫1 dx。",
+        "三项依次为 x⁴、−3x²、2x。",
+        "合并得到 x⁴−3x²+2x+C。",
+        "求导逐项得到 4x³−6x+2；常数项的积分应有 x。"
+      ],
+      "title": "多项式各项与常数项",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "c6fcd876774135f15601",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 多项式各项与常数项"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>4</mn><mo>⁢</mo><msup><mi>x</mi><mn>3</mn></msup></mrow><mo>-</mo><mrow><mn>6</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>2</mn></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>4</mn></msup><mo>-</mo><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_transfer_trig",
+      "skill": "basic",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "2*cos(x)-3*sin(x)",
+      "answer": "2*sin(x)+3*cos(x)+C",
+      "hint_steps": [
+        "分别回忆 sin(x) 与 cos(x) 的导数。",
+        "−3sin(x) 对应哪一个余弦函数的导数？"
+      ],
+      "solution_steps": [
+        "把原式拆为 2∫cos(x) dx−3∫sin(x) dx。",
+        "第一项为 2sin(x)，第二项为 3cos(x)。",
+        "得到 2sin(x)+3cos(x)+C。",
+        "求导后第二项带负号，结果是 2cos(x)−3sin(x)。"
+      ],
+      "title": "三角函数积分的正负号",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "904f8cdef4b4ffc8d03d",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 三角函数积分的正负号"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mo>-</mo><mn>3</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mn>3</mn><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_post_polynomial",
+      "skill": "basic",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "5*x^4+4*sin(x)",
+      "answer": "x^5-4*cos(x)+C",
+      "hint_steps": [
+        "逐项积分，分别用幂函数和三角函数公式。",
+        "sin(x) 的原函数前面需要负号。"
+      ],
+      "solution_steps": [
+        "将原式写成 5∫x⁴ dx+4∫sin(x) dx。",
+        "第一项是 x⁵，第二项是 −4cos(x)。",
+        "合并为 x⁵−4cos(x)+C。",
+        "求导得到 5x⁴+4sin(x)，系数与符号均还原。"
+      ],
+      "title": "幂次与符号：独立检查",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "f918c06a341b08d2a902",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 幂次与符号：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>5</mn><mo>⁢</mo><msup><mi>x</mi><mn>4</mn></msup></mrow><mo>+</mo><mrow><mn>4</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>5</mn></msup><mo>-</mo><mrow><mn>4</mn><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_post_exponential",
+      "skill": "basic",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "3*exp(x)-2*cos(x)",
+      "answer": "3*exp(x)-2*sin(x)+C",
+      "hint_steps": [
+        "常数系数可以提出，减号保持不变。",
+        "用 exp(x) 与 cos(x) 的基本积分公式。"
+      ],
+      "solution_steps": [
+        "拆成 3∫exp(x) dx−2∫cos(x) dx。",
+        "分别积分为 3exp(x) 和 −2sin(x)。",
+        "合并得到 3exp(x)−2sin(x)+C。",
+        "求导恢复 3exp(x)−2cos(x)，不定积分须保留 C。"
+      ],
+      "title": "指数与三角：独立检查",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "23c1d6bcac0067f6d20a",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 指数与三角：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mo>-</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mn>3</mn><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mo>-</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "basic_delayed",
+      "skill": "basic",
+      "phase": "delayed",
+      "kind": "indefinite",
+      "integrand": "6*x^5+exp(x)",
+      "answer": "x^6+exp(x)+C",
+      "hint_steps": [
+        "把幂函数项和指数函数项分开计算。",
+        "x 的五次方积分后是六次方，注意系数是否抵消。"
+      ],
+      "solution_steps": [
+        "分别计算 6∫x⁵ dx 与 ∫exp(x) dx。",
+        "幂函数公式给出 6×x⁶/6=x⁶；指数函数积分为自身。",
+        "合并为 x⁶+exp(x)+C。",
+        "求导得到 6x⁵+exp(x)，与题目一致。"
+      ],
+      "title": "基本公式：次日检查",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "delayed",
+      "ref": "3aa834f69b476da3148c",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "基本积分 · 基本公式：次日检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>6</mn><mo>⁢</mo><msup><mi>x</mi><mn>5</mn></msup></mrow><mo>+</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>6</mn></msup><mo>+</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow></math>"
+    },
     {
       "id": "substitution_diagnostic",
       "skill": "substitution",
@@ -86,6 +628,18 @@
         "将原式整体改写为 ∫exp(u) du，不能遗留 x。",
         "exp(u) 的原函数仍是 exp(u)，换回后为 exp(x²)+C。",
         "求导检查：exp(x²)×2x，正好等于原被积式。"
+      ],
+      "title": "指数复合函数：起点检查",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.2-alpha.1",
+      "pool": "diagnostic",
+      "ref": "4cd7e13144476560e091",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 指数复合函数：起点检查"
+        }
       ]
     },
     {
@@ -108,50 +662,18 @@
         "原式变为 ∫cos(u) du=sin(u)+C。",
         "把 u 换回 x³，得到 sin(x³)+C。",
         "求导得到 cos(x³)×3x²，与被积式相同。"
-      ]
-    },
-    {
-      "id": "substitution_transfer",
-      "skill": "substitution",
-      "phase": "transfer",
-      "kind": "indefinite",
-      "integrand": "x*exp(x^2)",
-      "answer": "exp(x^2)/2+C",
-      "source": "临考编写的训练题；不是任何高校真题。",
-      "hint_steps": [
-        "观察指数里的 x²，注意它的导数与外面的 x 是否完全一致。",
-        "设 u=x²，则 du=2x dx，所以 x dx=du/2。",
-        "把 1/2 留在积分号外，再对 exp(u) 积分。"
       ],
-      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup><mn>2</mn></mfrac></mrow></mrow></math>",
-      "solution_steps": [
-        "设 u=x²，则 du=2x dx，故 x dx=du/2。",
-        "原式等于 (1/2)∫exp(u) du=exp(u)/2+C。",
-        "换回得到 exp(x²)/2+C。",
-        "求导时乘上 2x，与前面的 1/2 合并后得到 x·exp(x²)。"
-      ]
-    },
-    {
-      "id": "substitution_post",
-      "skill": "substitution",
-      "phase": "post",
-      "kind": "indefinite",
-      "integrand": "6*x*exp(3*x^2+1)",
-      "answer": "exp(3*x^2+1)+C",
-      "source": "临考编写的训练题；不是任何高校真题。",
-      "hint_steps": [
-        "先看指数里的整体 3x²+1，而不只是 x²。",
-        "设 u=3x²+1，则 du=6x dx，正好对应外面的因子。",
-        "换元后对 exp(u) 积分，再完整换回。"
-      ],
-      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>6</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow></math>",
-      "solution_steps": [
-        "设 u=3x²+1，则 du=6x dx。",
-        "原式化为 ∫exp(u) du=exp(u)+C。",
-        "换回得到 exp(3x²+1)+C。",
-        "对结果求导，链式法则给出 6x·exp(3x²+1)，与被积式相同。"
+      "title": "三角复合函数的整体替换",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.2-alpha.1",
+      "pool": "practice",
+      "ref": "ec1ecd41c22ab1a619d7",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 三角复合函数的整体替换"
+        }
       ]
     },
     {
@@ -174,7 +696,53 @@
         "求导时外层的 3 与分母 3 抵消，再乘内层导数 2x+1，得到原被积式。"
       ],
       "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mo>(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mn>3</mn></msup><mn>3</mn></mfrac></mrow></mrow></math>"
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mn>3</mn></msup><mn>3</mn></mfrac></mrow></mrow></math>",
+      "title": "多项式内层的幂函数积分",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.2-alpha.1",
+      "pool": "practice",
+      "ref": "c41c19cae360c6a69ff4",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 多项式内层的幂函数积分"
+        }
+      ]
+    },
+    {
+      "id": "substitution_transfer",
+      "skill": "substitution",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "x*exp(x^2)",
+      "answer": "exp(x^2)/2+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "观察指数里的 x²，注意它的导数与外面的 x 是否完全一致。",
+        "设 u=x²，则 du=2x dx，所以 x dx=du/2。",
+        "把 1/2 留在积分号外，再对 exp(u) 积分。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mi>ⅇ</mi><msup><mi>x</mi><mn>2</mn></msup></msup><mn>2</mn></mfrac></mrow></mrow></math>",
+      "solution_steps": [
+        "设 u=x²，则 du=2x dx，故 x dx=du/2。",
+        "原式等于 (1/2)∫exp(u) du=exp(u)/2+C。",
+        "换回得到 exp(x²)/2+C。",
+        "求导时乘上 2x，与前面的 1/2 合并后得到 x·exp(x²)。"
+      ],
+      "title": "导数差一个系数怎么办",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.2-alpha.1",
+      "pool": "practice",
+      "ref": "2bad9f1748114baa871b",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 导数差一个系数怎么办"
+        }
+      ]
     },
     {
       "id": "substitution_transfer_trig",
@@ -196,7 +764,53 @@
         "求导得到 sin(x)cos(x)。也可设 u=cos(x)，得到 -cos²(x)/2+C，两种原函数只差一个常数。"
       ],
       "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mn>2</mn></msup><mn>2</mn></mfrac></mrow></mrow></math>"
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><msup><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mn>2</mn></msup><mn>2</mn></mfrac></mrow></mrow></math>",
+      "title": "从三角函数乘积找换元",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.2-alpha.1",
+      "pool": "practice",
+      "ref": "f60a78a67e134103dc0b",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 从三角函数乘积找换元"
+        }
+      ]
+    },
+    {
+      "id": "substitution_post",
+      "skill": "substitution",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "6*x*exp(3*x^2+1)",
+      "answer": "exp(3*x^2+1)+C",
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "hint_steps": [
+        "先看指数里的整体 3x²+1，而不只是 x²。",
+        "设 u=3x²+1，则 du=6x dx，正好对应外面的因子。",
+        "换元后对 exp(u) 积分，再完整换回。"
+      ],
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mn>6</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>ⅇ</mi><mrow><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mn>1</mn></mrow></msup></mrow></math>",
+      "solution_steps": [
+        "设 u=3x²+1，则 du=6x dx。",
+        "原式化为 ∫exp(u) du=exp(u)+C。",
+        "换回得到 exp(3x²+1)+C。",
+        "对结果求导，链式法则给出 6x·exp(3x²+1)，与被积式相同。"
+      ],
+      "title": "指数整体：独立检查",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.2-alpha.1",
+      "pool": "post",
+      "ref": "91653bf61559069a39b3",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 指数整体：独立检查"
+        }
+      ]
     },
     {
       "id": "substitution_post_log",
@@ -218,42 +832,592 @@
         "求导检查：分子为内层导数 2x+1，分母为 x²+x+1，正好还原被积式。"
       ],
       "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mfrac><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>log</mi><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math>"
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>log</mi><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math>",
+      "title": "分子与分母导数：独立检查",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.2-alpha.1",
+      "pool": "post",
+      "ref": "3b206be3c0a7ae768d60",
+      "source_refs": [
+        {
+          "source_id": "original-v02",
+          "locator": "换元积分 · 分子与分母导数：独立检查"
+        }
+      ]
     },
     {
-      "id": "basic_foundation",
-      "skill": "basic",
-      "phase": "foundation",
+      "id": "substitution_delayed",
+      "skill": "substitution",
+      "phase": "delayed",
       "kind": "indefinite",
-      "integrand": "2*x+1",
-      "answer": "x^2+x+C",
-      "source": "临考编写的训练题；不是任何高校真题。",
+      "integrand": "2*x/sqrt(x^2+4)",
+      "answer": "2*sqrt(x^2+4)+C",
       "hint_steps": [
-        "先把 2x 和常数 1 分别积分。",
-        "x 的积分是 x²/2，1 的积分是 x。",
-        "保留系数 2，合并两项，并加积分常数 C。"
+        "先看根号中的 x²+4，它的导数与分子有什么关系？",
+        "设 u=x²+4 后，将根式倒数写成 u 的 −1/2 次方。"
       ],
       "solution_steps": [
-        "拆成 ∫2x dx+∫1 dx。",
-        "第一项为 2×x²/2=x²，第二项为 x。",
-        "合并并加常数，得到 x²+x+C。",
-        "求导得到 2x+1。补练结束后回到原来的训练位置。"
+        "设 u=x²+4，du=2x dx，且 u 始终大于 0。",
+        "原式化为 ∫u^(−1/2) du=2sqrt(u)+C。",
+        "换回得到 2sqrt(x²+4)+C。",
+        "求导为 2×(1/2)×(x²+4)^(−1/2)×2x，即原被积式；根式在全实数范围有定义。"
       ],
-      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>1</mn></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
-      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi></mrow></math>"
+      "title": "根式中的整体：次日检查",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "delayed",
+      "ref": "4b8633466c1f5b0db22f",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "换元积分 · 根式中的整体：次日检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mfrac><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><msqrt><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>4</mn></mrow></msqrt></mfrac></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><msqrt><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>4</mn></mrow></msqrt></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_diagnostic",
+      "skill": "parts",
+      "phase": "diagnostic",
+      "kind": "indefinite",
+      "integrand": "x*sin(x)",
+      "answer": "-x*cos(x)+sin(x)+C",
+      "hint_steps": [
+        "直接换元不能消去所有 x，可以考虑分部积分。",
+        "令 u=x，dv=sin(x)dx，则 v 的符号应是什么？"
+      ],
+      "solution_steps": [
+        "令 u=x，dv=sin(x)dx，则 du=dx，v=−cos(x)。",
+        "使用 ∫u dv=uv−∫v du，原式为 −xcos(x)+∫cos(x)dx。",
+        "得到 −xcos(x)+sin(x)+C。",
+        "求导为 −cos(x)+xsin(x)+cos(x)=xsin(x)。"
+      ],
+      "title": "多项式乘正弦：起点检查",
+      "minutes": 6,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "diagnostic",
+      "ref": "e82b398c5436d251e0aa",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 多项式乘正弦：起点检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>-</mo><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_guided",
+      "skill": "parts",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "x*exp(x)",
+      "answer": "(x-1)*exp(x)+C",
+      "hint_steps": [
+        "x 求导会变简单，而 exp(x) 容易积分。",
+        "令 u=x、dv=exp(x)dx，代入 uv−∫v du。"
+      ],
+      "solution_steps": [
+        "令 u=x、dv=exp(x)dx，则 du=dx、v=exp(x)。",
+        "原式等于 xexp(x)−∫exp(x)dx。",
+        "计算剩余积分得到 xexp(x)−exp(x)+C，也可写成 (x−1)exp(x)+C。",
+        "用乘积法则求导：exp(x)+(x−1)exp(x)=xexp(x)。"
+      ],
+      "title": "选择求导后更简单的因子",
+      "minutes": 6,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "6d91c9de5e1659f02ff2",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 选择求导后更简单的因子"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mi>x</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_guided_trig",
+      "skill": "parts",
+      "phase": "guided",
+      "kind": "indefinite",
+      "integrand": "x*cos(x)",
+      "answer": "x*sin(x)+cos(x)+C",
+      "hint_steps": [
+        "让 x 作为 u，cos(x)dx 作为 dv。",
+        "得到 −∫sin(x)dx 后，再检查 sin 的原函数符号。"
+      ],
+      "solution_steps": [
+        "取 u=x，dv=cos(x)dx，则 du=dx，v=sin(x)。",
+        "原式为 xsin(x)−∫sin(x)dx。",
+        "因为 ∫sin(x)dx=−cos(x)+C，结果为 xsin(x)+cos(x)+C。",
+        "求导得到 sin(x)+xcos(x)−sin(x)=xcos(x)。"
+      ],
+      "title": "分部积分中的两个负号",
+      "minutes": 6,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "2857368d50d1deca7eb7",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 分部积分中的两个负号"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_transfer_polynomial",
+      "skill": "parts",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "x^2*exp(x)",
+      "answer": "(x^2-2*x+2)*exp(x)+C",
+      "hint_steps": [
+        "把 x² 作为 u；第一次分部积分后会剩下 xexp(x)。",
+        "剩余积分再做一次分部积分，保留外面的系数 2。"
+      ],
+      "solution_steps": [
+        "先取 u=x²、dv=exp(x)dx，得到 x²exp(x)−2∫xexp(x)dx。",
+        "对剩余积分取 u=x、dv=exp(x)dx，得 ∫xexp(x)dx=xexp(x)−exp(x)+C。",
+        "代回并合并：x²exp(x)−2xexp(x)+2exp(x)+C。",
+        "可因式分解为 (x²−2x+2)exp(x)+C；求导时多余项抵消，得到 x²exp(x)。"
+      ],
+      "title": "连续使用两次分部积分",
+      "minutes": 8,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "9e35b7c0fef6ed4112bb",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 连续使用两次分部积分"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>-</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>2</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_transfer_scaled",
+      "skill": "parts",
+      "phase": "transfer",
+      "kind": "indefinite",
+      "integrand": "x*exp(2*x)",
+      "answer": "exp(2*x)*(2*x-1)/4+C",
+      "hint_steps": [
+        "仍令 u=x，但 exp(2x) 的原函数不是 exp(2x)。",
+        "v=exp(2x)/2；剩余积分再次积分时还会出现 1/2。"
+      ],
+      "solution_steps": [
+        "取 u=x、dv=exp(2x)dx，则 du=dx、v=exp(2x)/2。",
+        "原式等于 xexp(2x)/2−(1/2)∫exp(2x)dx。",
+        "得到 xexp(2x)/2−exp(2x)/4+C，即 exp(2x)(2x−1)/4+C。",
+        "求导得到 exp(2x)(2x−1)/2+exp(2x)/2=xexp(2x)。"
+      ],
+      "title": "分部积分与内层系数",
+      "minutes": 7,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "721c41e5207ee9909c95",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 分部积分与内层系数"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><msup><mi>ⅇ</mi><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mfrac><mrow><mrow><mo>(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>ⅇ</mi><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow></msup></mrow><mn>4</mn></mfrac></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_post_trig",
+      "skill": "parts",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "x^2*cos(x)",
+      "answer": "x^2*sin(x)+2*x*cos(x)-2*sin(x)+C",
+      "hint_steps": [
+        "先取 u=x²，dv=cos(x)dx。",
+        "第一次积分后剩下 ∫xsin(x)dx；对它再分部一次。"
+      ],
+      "solution_steps": [
+        "第一次分部得 x²sin(x)−2∫xsin(x)dx。",
+        "对剩余积分取 u=x、dv=sin(x)dx，得 −xcos(x)+sin(x)。",
+        "代回得到 x²sin(x)+2xcos(x)−2sin(x)+C。",
+        "求导时 2xsin(x) 和 2cos(x) 项分别抵消，留下 x²cos(x)。"
+      ],
+      "title": "平方因子乘余弦：独立检查",
+      "minutes": 8,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "64bc9913a7e9c0ca49ef",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 平方因子乘余弦：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo>-</mo><mrow><mn>2</mn><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_post_repeated",
+      "skill": "parts",
+      "phase": "post",
+      "kind": "indefinite",
+      "integrand": "x^3*exp(x)",
+      "answer": "(x^3-3*x^2+6*x-6)*exp(x)+C",
+      "hint_steps": [
+        "让 x³ 逐次求导，exp(x) 保持作为易积分的一部分。",
+        "第一次得到 x³exp(x)−3∫x²exp(x)dx，继续降低多项式次数。"
+      ],
+      "solution_steps": [
+        "取 u=x³、dv=exp(x)dx，得 x³exp(x)−3∫x²exp(x)dx。",
+        "再分部得到 ∫x²exp(x)dx=x²exp(x)−2∫xexp(x)dx。",
+        "由 ∫xexp(x)dx=xexp(x)−exp(x)+C，代回得 (x³−3x²+6x−6)exp(x)+C。",
+        "求导时多项式与其导数相加为 x³，因此还原为 x³exp(x)。"
+      ],
+      "title": "三次因子的连续分部：独立检查",
+      "minutes": 8,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "ba1adc8e973657b92943",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 三次因子的连续分部：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><msup><mi>x</mi><mn>3</mn></msup><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>+</mo><mrow><mrow><mo>(</mo><mrow><msup><mi>x</mi><mn>3</mn></msup><mo>-</mo><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mo>+</mo><mrow><mn>6</mn><mo>⁢</mo><mi>x</mi></mrow><mo>-</mo><mn>6</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow></mrow></math>"
+    },
+    {
+      "id": "parts_delayed",
+      "skill": "parts",
+      "phase": "delayed",
+      "kind": "indefinite",
+      "integrand": "x*sin(2*x)",
+      "answer": "-x*cos(2*x)/2+sin(2*x)/4+C",
+      "hint_steps": [
+        "取 u=x，先准确写出 sin(2x) 的原函数。",
+        "v=−cos(2x)/2，剩下的余弦积分还要处理内层系数。"
+      ],
+      "solution_steps": [
+        "取 u=x、dv=sin(2x)dx，则 du=dx、v=−cos(2x)/2。",
+        "原式变为 −xcos(2x)/2+(1/2)∫cos(2x)dx。",
+        "结果为 −xcos(2x)/2+sin(2x)/4+C。",
+        "求导时 −cos(2x)/2 与 cos(2x)/2 抵消，得到 xsin(2x)。"
+      ],
+      "title": "复合正弦与分部：次日检查",
+      "minutes": 7,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "delayed",
+      "ref": "56685e0ba305f0991482",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "分部积分 · 复合正弦与分部：次日检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>∫</mo><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>sin</mi><mrow><mo>(</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>C</mi><mo>-</mo><mrow><mfrac><mrow><mi>x</mi><mo>⁢</mo><mrow><mi>cos</mi><mrow><mo>(</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow></mrow><mn>2</mn></mfrac></mrow><mo>+</mo><mrow><mfrac><mrow><mi>sin</mi><mrow><mo>(</mo><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>)</mo></mrow></mrow><mn>4</mn></mfrac></mrow></mrow></math>"
+    },
+    {
+      "id": "definite_diagnostic",
+      "skill": "definite",
+      "phase": "diagnostic",
+      "kind": "definite",
+      "integrand": "3*x^2",
+      "answer": "8",
+      "hint_steps": [
+        "先求被积式的一个原函数，再计算上限值减下限值。",
+        "3x² 的原函数为 x³；定积分最终不含任意常数。"
+      ],
+      "solution_steps": [
+        "取一个原函数 F(x)=x³，求导为 3x²。",
+        "按牛顿—莱布尼茨公式计算 F(2)−F(0)。",
+        "结果为 2³−0³=8，最终写数值 8，不加 C。"
+      ],
+      "lower": "0",
+      "upper": "2",
+      "title": "代入上下限：起点检查",
+      "minutes": 4,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "diagnostic",
+      "ref": "679df1932628dccc1eea",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 代入上下限：起点检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mn>2</mn></msubsup><mrow><mn>3</mn><mo>⁢</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mn>8</mn></math>"
+    },
+    {
+      "id": "definite_guided",
+      "skill": "definite",
+      "phase": "guided",
+      "kind": "definite",
+      "integrand": "2*x+3",
+      "answer": "4",
+      "hint_steps": [
+        "对 2x+3 逐项积分。",
+        "把上限和下限代入整个原函数，而不是只代入其中一项。"
+      ],
+      "solution_steps": [
+        "原函数可取 F(x)=x²+3x，求导还原 2x+3。",
+        "计算 F(1)−F(0)=(1+3)−0。",
+        "结果是 4；定积分表示一个数，不需要 +C。"
+      ],
+      "lower": "0",
+      "upper": "1",
+      "title": "上下限相减与常数项",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "9516f740690975a265bf",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 上下限相减与常数项"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup><mrow><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mo>+</mo><mn>3</mn></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mn>4</mn></math>"
+    },
+    {
+      "id": "definite_guided_trig",
+      "skill": "definite",
+      "phase": "guided",
+      "kind": "definite",
+      "integrand": "cos(x)",
+      "answer": "1",
+      "hint_steps": [
+        "先写出 cos(x) 的原函数。",
+        "分别计算 sin(pi/2) 和 sin(0)。"
+      ],
+      "solution_steps": [
+        "取 F(x)=sin(x)，求导为 cos(x)。",
+        "计算 F(pi/2)−F(0)=sin(pi/2)−sin(0)。",
+        "上限值为 1，下限值为 0，因此积分为 1。"
+      ],
+      "lower": "0",
+      "upper": "pi/2",
+      "title": "三角函数与特殊角",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "3eb4d977a0417f392c25",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 三角函数与特殊角"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mrow><mfrac><mi>π</mi><mn>2</mn></mfrac></mrow></msubsup><mrow><mi>cos</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mn>1</mn></math>"
+    },
+    {
+      "id": "definite_transfer_exponential",
+      "skill": "definite",
+      "phase": "transfer",
+      "kind": "definite",
+      "integrand": "exp(x)",
+      "answer": "exp(1)-1",
+      "hint_steps": [
+        "exp(x) 的原函数是自身。",
+        "下限代入后是 exp(0)=1，不是 0。"
+      ],
+      "solution_steps": [
+        "取 F(x)=exp(x)，求导仍为 exp(x)。",
+        "计算 F(1)−F(0)=exp(1)−exp(0)。",
+        "结果为 exp(1)−1，也可输入 e−1；保留精确值。"
+      ],
+      "lower": "0",
+      "upper": "1",
+      "title": "指数函数上下限与精确值",
+      "minutes": 5,
+      "difficulty": "基础",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "227bab411108dcf3f847",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 指数函数上下限与精确值"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup><msup><mi>ⅇ</mi><mi>x</mi></msup><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mn>-1</mn><mo>+</mo><mi>ⅇ</mi></mrow></math>"
+    },
+    {
+      "id": "definite_transfer_symmetry",
+      "skill": "definite",
+      "phase": "transfer",
+      "kind": "definite",
+      "integrand": "x^3+x^2",
+      "answer": "2/3",
+      "hint_steps": [
+        "可以逐项求原函数，也可以先观察奇偶性。",
+        "x³ 在对称区间上的积分为 0；x² 的积分不会抵消。"
+      ],
+      "solution_steps": [
+        "取 F(x)=x⁴/4+x³/3，求导为 x³+x²。",
+        "F(1)=1/4+1/3，F(−1)=1/4−1/3。",
+        "相减得到 2/3。也可用奇函数 x³ 的积分抵消，再计算偶函数 x² 的积分。",
+        "定积分计算的是带符号的累积量，不能把负半轴上的函数值一律取绝对值。"
+      ],
+      "lower": "-1",
+      "upper": "1",
+      "title": "对称区间与带符号的积分",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "practice",
+      "ref": "620ffe4a6b25983b5300",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 对称区间与带符号的积分"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>-1</mn><mn>1</mn></msubsup><mrow><msup><mi>x</mi><mn>3</mn></msup><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mfrac><mn>2</mn><mn>3</mn></mfrac></math>"
+    },
+    {
+      "id": "definite_post_substitution",
+      "skill": "definite",
+      "phase": "post",
+      "kind": "definite",
+      "integrand": "2*x/(x^2+1)",
+      "answer": "ln(2)",
+      "hint_steps": [
+        "分母 x²+1 的导数正好是分子。",
+        "可取原函数 ln(x²+1)，再分别代入 1 和 0。"
+      ],
+      "solution_steps": [
+        "设 u=x²+1，du=2x dx，积分限从 x=0、1 变成 u=1、2。",
+        "原式化为从 1 到 2 的 ∫1/u du，结果为 ln(2)−ln(1)。",
+        "因为 ln(1)=0，最终结果为 ln(2)。",
+        "核对原函数：ln(x²+1) 求导为 2x/(x²+1)，且分母在区间内始终为正。"
+      ],
+      "lower": "0",
+      "upper": "1",
+      "title": "先换元再代限：独立检查",
+      "minutes": 6,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "f7ce285e84367bbc8d10",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 先换元再代限：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup><mrow><mfrac><mrow><mn>2</mn><mo>⁢</mo><mi>x</mi></mrow><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>log</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></mrow></math>"
+    },
+    {
+      "id": "definite_post_product",
+      "skill": "definite",
+      "phase": "post",
+      "kind": "definite",
+      "integrand": "(x+1)*exp(x)",
+      "answer": "exp(1)",
+      "hint_steps": [
+        "将被积式拆成 xexp(x)+exp(x)，第一项可分部积分。",
+        "也可以反向观察 xexp(x) 的乘积求导结果。"
+      ],
+      "solution_steps": [
+        "分部积分得到 ∫xexp(x)dx=xexp(x)−exp(x)+C。",
+        "再加上 ∫exp(x)dx 后，可取整个被积式的原函数 F(x)=xexp(x)。",
+        "代入上下限：F(1)−F(0)=exp(1)−0=exp(1)。",
+        "求导检查 F′(x)=exp(x)+xexp(x)=(x+1)exp(x)，最终不加 C。"
+      ],
+      "lower": "0",
+      "upper": "1",
+      "title": "识别乘积的原函数：独立检查",
+      "minutes": 7,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "post",
+      "ref": "19b108d0a8534288b8c5",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 识别乘积的原函数：独立检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup><mrow><mrow><mo>(</mo><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>ⅇ</mi><mi>x</mi></msup></mrow><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi>ⅇ</mi></math>"
+    },
+    {
+      "id": "definite_delayed",
+      "skill": "definite",
+      "phase": "delayed",
+      "kind": "definite",
+      "integrand": "sin(x)^2",
+      "answer": "pi/2",
+      "hint_steps": [
+        "使用 sin²(x)=(1−cos(2x))/2，将平方改成可直接积分的形式。",
+        "求得原函数后代入 pi 和 0，注意 sin(2pi)=0。"
+      ],
+      "solution_steps": [
+        "由降幂公式，sin²(x)=(1−cos(2x))/2。",
+        "原函数可取 F(x)=x/2−sin(2x)/4，求导得到 (1−cos(2x))/2。",
+        "代入上下限，F(pi)−F(0)=pi/2−0=pi/2。",
+        "用正负性检查：sin²(x) 在区间上非负，所得结果为正。"
+      ],
+      "lower": "0",
+      "upper": "pi",
+      "title": "三角恒等式与定积分：次日检查",
+      "minutes": 7,
+      "difficulty": "进阶",
+      "version": "0.3-alpha.1",
+      "pool": "delayed",
+      "ref": "f5fa35fc8435635f15f0",
+      "source_refs": [
+        {
+          "source_id": "original-v03",
+          "locator": "定积分计算 · 三角恒等式与定积分：次日检查"
+        }
+      ],
+      "source": "临考编写的训练题；不是任何高校真题。",
+      "formula_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msubsup><mo>∫</mo><mn>0</mn><mi>π</mi></msubsup><msup><mrow><mi>sin</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mn>2</mn></msup><mspace width=\"0.2em\"/><mi mathvariant=\"normal\">d</mi><mi>x</mi></mrow></math>",
+      "answer_html": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mfrac><mi>π</mi><mn>2</mn></mfrac></mrow></math>"
     }
-  ],
-  "diagnostic_order": [
-    "substitution_diagnostic"
-  ],
-  "training_order": [
-    "substitution_guided",
-    "substitution_guided_polynomial",
-    "substitution_transfer",
-    "substitution_transfer_trig"
-  ],
-  "post_order": [
-    "substitution_post",
-    "substitution_post_log"
   ]
 }

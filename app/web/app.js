@@ -8,11 +8,14 @@ let previewController = null;
 let previewSequence = 0;
 const draftPrefix = 'lingkao:draft:v1:';
 const pageDrafts = new Map();
+const pageAIDrafts = new Map();
 const recoveryDrafts = new Map();
 let storageAvailable = true;
 let recoveryStorageAvailable = true;
 let draftConflict = false;
 let draftSequence = 0;
+let aiPollTimer = null;
+let aiPollFailures = 0;
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
 const phaseNames = {setup: '开始与范围', diagnostic: '起点诊断', plan: '单元训练', training: '单元训练', post: '独立复测', report: '学习报告'};
@@ -37,6 +40,9 @@ function participantPrefix(participant = state.participant) {
 
 function draftKey(value = state) {
   if (!value?.question || !value.instance_id) return null;
+  if (value.question.ref && value.question.run_id) {
+    return `${participantPrefix(value.participant)}question:${encodeURIComponent(value.question.ref)}:${encodeURIComponent(value.question.version)}:${encodeURIComponent(value.question.run_id)}`;
+  }
   const location = value.stage === 'foundation' ? 'foundation' : value.progress.current;
   return `${participantPrefix(value.participant)}${encodeURIComponent(value.course.version)}:${value.phase}:${value.stage || ''}:${location}`;
 }
@@ -93,6 +99,7 @@ function getDraft(key) {
 }
 
 function recoveryLabel() {
+  if (state.question?.title) return state.question.title;
   return `${phaseNames[state.phase]} · ${state.stage === 'foundation' ? '基础补练' : `第 ${state.progress.current} 题`}`;
 }
 
@@ -216,6 +223,7 @@ function clearParticipantDrafts(participant, revision) {
   // deleting drafts created after the restart response was committed.
   writeStored(`${prefix}reset_revision`, Math.max(revision, resetRevision(participant)));
   for (const key of pageDrafts.keys()) if (key.startsWith(prefix)) pageDrafts.delete(key);
+  for (const key of pageAIDrafts.keys()) if (key.startsWith(prefix)) pageAIDrafts.delete(key);
   for (const key of recoveryDrafts.keys()) if (key.startsWith(prefix)) removeRecovery(key);
   if (recoveryStorageAvailable) {
     try {
@@ -292,7 +300,7 @@ function answerBox() {
 
 function assessment() {
   const isPost = state.phase === 'post';
-  return `<div class="assessment-wrap"><div class="section-head"><div><div class="eyebrow">${isPost ? '未见过的新题 · 独立完成' : '先了解起点 · 不要求全会'}</div><h1>${isPost ? '关掉提示，自己做一次。' : '从这道题开始。'}</h1><p class="lead">${isPost ? '自己判断怎么做。全部完成后统一显示结果；同一套题只有一次新题复测机会。' : '可以在纸上写步骤，再输入结果。不会就跳过，后面会从必要知识和示范开始。'}</p></div></div>${progressMarkup()}<section class="card question-card"><div class="q-meta"><span>计算下面的积分</span><span class="tag">提示与答疑已关闭</span></div><div class="formula">${state.question.formula_html}</div>${answerBox()}<div class="question-actions">${button('提交并继续 →', 'answer')}${button('暂时不会，跳过', 'skip', 'ghost')}</div><div id="busyText" class="busy-indicator" role="status"></div><p class="tiny-note">只核对最终表达式，暂不批改完整推导过程。</p></section><div class="note neutral assess-note">测评期间暂不可导出记录，完成后恢复。${isPost ? '本组只检查换元积分训练，不代表整门高数的考试水平。' : '一道题的结果只作为本单元的学习起点。'}</div></div>`;
+  return `<div class="assessment-wrap"><div class="section-head"><div><div class="eyebrow">${isPost ? '未见过的新题 · 独立完成' : '先了解起点 · 不要求全会'}</div><h1>${isPost ? '关掉提示，自己做一次。' : '从这道题开始。'}</h1><p class="lead">${isPost ? '自己判断怎么做。全部完成后统一显示结果；同一套题只有一次新题复测机会。' : '可以在纸上写步骤，再输入结果。不会就跳过，后面会从必要知识和示范开始。'}</p></div></div>${progressMarkup()}<section class="card question-card"><div class="q-meta"><span>计算下面的积分</span><span class="tag">提示与答疑已关闭</span></div><div class="formula">${state.question.formula_html}</div>${answerBox()}<div class="question-actions">${button('提交并继续 →', 'answer')}${button('暂时不会，跳过', 'skip', 'ghost')}</div><div id="busyText" class="busy-indicator" role="status"></div><p class="tiny-note">只核对最终表达式，暂不批改完整推导过程。</p></section><div class="note neutral assess-note">测评期间暂不可导出记录，完成后恢复。${isPost ? '本组只检查换元积分训练，不代表整门高数的考试水平。' : '一道题的结果只作为本单元的学习起点。'}</div>${state.legacy_mode ? `<div class="assessment-foot"><span>正在完成旧版冻结测评；已展示的题会保留已见记录。</span>${button('提前结束旧版测评', 'end_assessment', 'ghost')}</div>` : ''}</div>`;
 }
 
 function plan() {
@@ -380,8 +388,12 @@ function render() {
   cancelPreview();
   markRevision();
   draftConflict = latestRevision() > state.revision;
-  const views = {setup, diagnostic: assessment, plan, training, post: assessment, report};
-  $('#app').innerHTML = shell(views[state.phase]());
+  migrateBrowserDrafts();
+  const modern = typeof isV3 === 'function' && isV3();
+  const views = modern
+    ? {setup: v3Setup, catalog: v3Catalog, review: v3Review, training: v3Training, assessment: v3Assessment, report: v3Report}
+    : {setup, diagnostic: assessment, plan, training, post: assessment, report};
+  $('#app').innerHTML = modern ? v3Shell((views[state.phase] || v3Catalog)()) : shell(views[state.phase]());
   const input = $('#answer');
   if (input) {
     const draft = completeFeedback() ? null : getDraft(draftKey());
@@ -397,6 +409,92 @@ function render() {
   if (input?.value) schedulePreview();
   const history = $('#chatHistory');
   if (history) history.scrollTop = history.scrollHeight;
+  restoreAIInput();
+  scheduleAIPoll();
+}
+
+function migrateBrowserDrafts() {
+  if (!state || !storageAvailable) return;
+  for (const mapping of state.legacy_drafts || []) {
+    const suffix = mapping.old_key_suffix || mapping.old_suffix;
+    if (!suffix || !mapping.question_ref || !mapping.run_id) continue;
+    const oldKey = participantPrefix() + suffix;
+    const old = getDraft(oldKey);
+    const newKey = `${participantPrefix()}question:${encodeURIComponent(mapping.question_ref)}:${encodeURIComponent(mapping.question_version)}:${encodeURIComponent(mapping.run_id)}`;
+    if (old && !getDraft(newKey) && !readStored(`${oldKey}:migrated`)) {
+      const value = {...old, edit_id: old.edit_id || newDraftId()};
+      if (writeStored(newKey, value) !== false && readStored(newKey)?.answer === value.answer) {
+        clearDraft(oldKey, draftId(old));
+        writeStored(`${oldKey}:migrated`, true);
+      }
+    }
+  }
+  // Unmapped v2 inputs stay copyable, never silently enter a different question.
+  if (typeof isV3 === 'function' && isV3()) {
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(`${participantPrefix()}0.2-alpha.1:`)) continue;
+        const value = getDraft(key);
+        if (value?.answer) preserveDraft(key, {...value, label: '旧版草稿 · 请复制后核对对应题目'});
+      }
+    } catch { storageAvailable = false; }
+  }
+}
+
+function aiDraftKey() {
+  const q = state?.question;
+  return q?.ref ? `${participantPrefix()}ai:${q.ref}:${q.version}:${q.run_id}` : null;
+}
+function aiRequestId(value = state) { return value?.ai_request?.request_id || value?.ai_request?.id; }
+function readAIDraft(key) { return readStored(key) || pageAIDrafts.get(key); }
+function writeAIDraft(key, value) {
+  pageAIDrafts.set(key, value);
+  writeStored(key, value);
+}
+function saveAIInput() {
+  const key = aiDraftKey();
+  const input = $('#aiMessage');
+  if (key && input && !input.disabled) writeAIDraft(key, {message: input.value});
+}
+function restoreAIInput() {
+  const key = aiDraftKey();
+  const input = $('#aiMessage');
+  if (!key || !input) return;
+  const saved = readAIDraft(key);
+  const status = state.ai_request?.status;
+  if (saved?.message && ['completed', 'succeeded', 'success'].includes(status)) {
+    const messages = (state.chat || []).filter(item => item.role === 'user');
+    if (messages.at(-1)?.content === saved.message && saved.request_id === aiRequestId()) {
+      writeAIDraft(key, {message: ''});
+      input.value = '';
+      return;
+    }
+  }
+  input.value = saved?.message || '';
+}
+function scheduleAIPoll() {
+  clearTimeout(aiPollTimer);
+  if (state?.ai_request?.status !== 'pending') return;
+  aiPollTimer = setTimeout(async () => {
+    if (busy) return scheduleAIPoll();
+    const participant = state.participant;
+    try {
+      const updated = await request('/api/state');
+      aiPollFailures = 0;
+      if (busy || state.participant !== participant || updated.participant !== participant || updated.revision < state.revision) return scheduleAIPoll();
+      if (updated.revision !== state.revision || updated.ai_request?.status !== state.ai_request?.status) {
+        saveDraft(false);
+        saveAIInput();
+        state = updated;
+        render();
+      } else scheduleAIPoll();
+    } catch {
+      aiPollFailures += 1;
+      if (aiPollFailures === 3) toast('暂时连接不到本地服务，输入已保留。保持服务运行后会继续查询，不会重复发送问题。');
+      scheduleAIPoll();
+    }
+  }, aiPollFailures ? 3000 : 1000);
 }
 
 async function request(path, payload, signal) {
@@ -426,6 +524,9 @@ function setBusy(message) {
 
 async function mutate(path, payload, scroll = false) {
   if (busy) return;
+  saveDraft(false);
+  saveAIInput();
+  const oldAIKey = aiDraftKey();
   const oldInstance = state.instance_id;
   const oldKey = draftKey();
   const oldParticipant = state.participant;
@@ -439,6 +540,9 @@ async function mutate(path, payload, scroll = false) {
   let keepFailedInput = false;
   try {
     state = await request(path, {...payload, revision: state.revision});
+    if (path === '/api/tutor' && oldAIKey && aiRequestId()) {
+      writeAIDraft(oldAIKey, {message: payload.message, request_id: aiRequestId()});
+    }
     if (payload.action === 'answer' || payload.action === 'skip') clearDraft(oldKey, submittedDraft?.edit_id);
     if (path === '/api/reset') clearParticipantDrafts(oldParticipant, Number.MAX_SAFE_INTEGER);
     if (payload.action === 'restart_training') clearParticipantDrafts(oldParticipant, state.revision);
@@ -448,11 +552,13 @@ async function mutate(path, payload, scroll = false) {
     keepFailedInput = error.status !== 409 && error.status !== 403 && submittedDraft
       && draftId(getDraft(oldKey)) !== submittedDraft.edit_id;
     if (keepFailedInput) preserveDraft(oldKey, submittedDraft);
-    if (error.status === 409 || error.status === 403) {
+    if (error.status === 409 || error.status === 403 || path === '/api/tutor') {
       preserveDraft(oldKey, submittedDraft);
       try {
         state = await request('/api/state');
-        errorMessage = '其他页面已更新进度，或当前题目已变化。本次操作未记录，已载入最新进度。';
+        errorMessage = path === '/api/tutor' && state.ai_request?.status === 'pending'
+          ? '问题已发送，正在查询答疑结果。'
+          : path === '/api/tutor' ? error.message : '其他页面已更新进度，或当前题目已变化。本次操作未记录，已载入最新进度。';
       } catch {
         errorMessage = '进度发生变化，但暂时无法连接服务。请刷新页面后再试，本次操作未记录。';
       }
@@ -483,7 +589,7 @@ async function mutate(path, payload, scroll = false) {
 function runAction(action, extra = {}) {
   const payload = {action, ...extra};
   if (state.instance_id) payload.instance_id = state.instance_id;
-  return mutate('/api/action', payload, ['start', 'start_skill', 'begin_practice', 'restart_training', 'post', 'plan', 'report', 'foundation', 'return_training', 'next'].includes(action));
+  return mutate('/api/action', payload, ['start', 'start_skill', 'begin_practice', 'restart_training', 'post', 'plan', 'report', 'foundation', 'return_training', 'next', 'select', 'catalog', 'review', 'diagnostic', 'assess', 'end_assessment'].includes(action));
 }
 
 function schedulePreview() {
@@ -593,6 +699,11 @@ async function handleRecovery(action, key, control) {
 function submitAnswer() {
   const input = $('#answer');
   if (!input || busy || completeFeedback()) return;
+  if (state?.ai_request?.status === 'pending') {
+    saveDraft(false);
+    toast('答疑正在进行，可以继续编辑草稿；请等待回复或取消等待后再提交。');
+    return;
+  }
   if (!input.value.trim()) {
     cancelPreview();
     $('#answerError').textContent = '请先填写最终表达式；暂时不会时，可以选择跳过。';
@@ -631,6 +742,46 @@ document.addEventListener('click', event => {
   const control = event.target.closest('[data-action]');
   if (!control || control.disabled || busy) return;
   const action = control.dataset.action;
+  if (action === 'end_assessment' && state.legacy_mode) {
+    if (!confirm('确定结束旧版测评吗？已展示的题会保留已见记录，之后进入新版题单。')) return;
+    return runAction('end_assessment');
+  }
+  if (typeof isV3 === 'function' && isV3()) {
+    if (action === 'time_pick') { $('#minutes').value = control.dataset.minutes; return; }
+    if (action === 'filter_skill' || action === 'clear_filters') {
+      listFilters = action === 'clear_filters' ? {skill: '', difficulty: '', status: '', search: ''} : {...listFilters, skill: control.dataset.skill};
+      render(); return;
+    }
+    if (action === 'work_tab') {
+      saveDraft(false); saveAIInput();
+      workTab = control.dataset.tab;
+      if (workTab === 'knowledge' && !state.lesson) return runAction('knowledge');
+      render(); return;
+    }
+    if (action === 'toggle_tutor') { saveDraft(false); saveAIInput(); tutorOpen = !tutorOpen; render(); return; }
+    if (action === 'select') return runAction('select', {question_ref: control.dataset.ref});
+    if (action === 'budget' || action === 'new_session') {
+      const minutes = Number($('#budgetMinutes').value);
+      if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240) return toast('请填写15到240之间的整数分钟。');
+      return runAction('budget', {minutes, new_session: action === 'new_session'});
+    }
+    if (action === 'assess') return runAction('assess', {skill: control.dataset.skill, mode: control.dataset.mode || 'post'});
+    if (action === 'end_assessment') {
+      if (!confirm('提前结束后，已展示的题目将保留已见记录，未提交题标记为本轮未完成。确定结束吗？')) return;
+      return runAction('end_assessment');
+    }
+    if (action === 'example') { workTab = 'knowledge'; return runAction(action); }
+    if (action === 'solution') { workTab = 'solution'; return runAction(action); }
+    if (action === 'send_ai') {
+      const message = $('#aiMessage')?.value.trim();
+      if (!message) return toast('先写下你对当前题目的问题。');
+      if (message.length > 600) return toast('问题请控制在600字以内。');
+      tutorOpen = true;
+      return mutate('/api/tutor', {instance_id: state.instance_id, message});
+    }
+    if (action === 'cancel_ai') return runAction('cancel_ai', {request_id: control.dataset.requestId});
+    if (action === 'quick') { tutorOpen = true; return runAction('preset', {message: control.dataset.message}); }
+  }
   if (['restore_draft', 'copy_draft', 'discard_draft'].includes(action)) return handleRecovery(action, control.dataset.recoveryKey, control);
   if (action === 'export') return exportData();
   if (action === 'reset') {
@@ -644,10 +795,10 @@ document.addEventListener('click', event => {
       $('#minutes').focus();
       return;
     }
-    return runAction(action, {minutes});
+    return runAction(action, {minutes, diagnostic: Boolean($('#diagnosticChoice')?.checked)});
   }
   if (action === 'answer') return submitAnswer();
-  if (action === 'skip' && ['diagnostic', 'post'].includes(state.phase)) {
+  if (action === 'skip' && ['diagnostic', 'post', 'assessment'].includes(state.phase)) {
     if (!confirm('跳过后会记录为“跳过”，本轮测评不能返回这道题。确定跳过吗？')) return;
   }
   if (action === 'quick') return mutate('/api/tutor', {instance_id: state.instance_id, message: control.dataset.message});
@@ -656,6 +807,14 @@ document.addEventListener('click', event => {
 
 document.addEventListener('input', event => {
   if (event.target.id === 'answer') answerEdited(!event.isComposing);
+  if (event.target.id === 'aiMessage') saveAIInput();
+  if (event.target.id === 'questionSearch') { listFilters.search = event.target.value; $('#questionRows').innerHTML = questionRows(); }
+});
+document.addEventListener('change', event => {
+  if (event.target.id === 'difficultyFilter') listFilters.difficulty = event.target.value;
+  else if (event.target.id === 'statusFilter') listFilters.status = event.target.value;
+  else return;
+  $('#questionRows').innerHTML = questionRows();
 });
 document.addEventListener('compositionend', event => {
   if (event.target.id === 'answer') answerEdited();

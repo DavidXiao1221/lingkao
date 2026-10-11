@@ -14,13 +14,15 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import server
 import engine
+import legacy_engine
+from ai_tutor import TutorConfig
 
 
 class HTTPTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp.name) / "test.sqlite3"
-        self.server = server.LocalServer(port=0, db_path=self.db_path)
+        self.server = server.LocalServer(port=0, db_path=self.db_path, ai_config=TutorConfig())
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.port = self.server.server_port
@@ -75,9 +77,8 @@ class HTTPTests(unittest.TestCase):
 
     def enter_training(self):
         self.assertEqual(self.mutate("start", minutes=20)[0], 200)
-        self.assertEqual(self.mutate("skip")[0], 200)
-        self.assertEqual(self.mutate("start_skill")[0], 200)
-        self.assertEqual(self.mutate("begin_practice")[0], 200)
+        ref = self.state["catalog"]["questions"][0]["ref"]
+        self.assertEqual(self.mutate("select", question_ref=ref)[0], 200)
 
     def test_health_and_static_do_not_create_sessions_or_enable_ai(self):
         with patch.dict("os.environ", {"DEEPSEEK_API_KEY": "not-a-real-key", "OPENAI_API_KEY": "not-a-real-key"}):
@@ -99,7 +100,7 @@ class HTTPTests(unittest.TestCase):
 
     def test_cookie_sessions_are_isolated_and_refresh_preserves_instance(self):
         self.assertIn(server.COOKIE_NAME, self.cookie)
-        self.assertEqual(self.mutate("start", minutes=20)[0], 200)
+        self.enter_training()
         status, refreshed, _ = self.request("GET", "/api/state", cookie=self.cookie)
         self.assertEqual(status, 200)
         self.assertEqual(refreshed["instance_id"], self.state["instance_id"])
@@ -124,10 +125,11 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(self.count_sessions(), 1)
 
     def test_assessment_export_and_teaching_endpoints_are_blocked(self):
-        self.assertEqual(self.mutate("start", minutes=20)[0], 200)
-        self.assertEqual(self.state["phase"], "diagnostic")
+        self.assertEqual(self.mutate("start", minutes=20, diagnostic=True)[0], 200)
+        self.assertEqual(self.state["phase"], "assessment")
         self.assertFalse(self.state["export_allowed"])
         self.assertEqual(self.request("GET", "/api/export", cookie=self.cookie)[0], 409)
+        self.assertEqual(self.request("GET", "/api/catalog", cookie=self.cookie)[0], 409)
         for action_name in ("hint", "example", "solution", "foundation"):
             with self.subTest(action=action_name):
                 self.assertNotEqual(self.mutate(action_name)[0], 200)
@@ -136,7 +138,8 @@ class HTTPTests(unittest.TestCase):
         self.assertIsNone(self.state["feedback"])
         self.assertIsNone(self.state["lesson"])
         self.assertNotIn("qid", self.state)
-        self.assertEqual(self.mutate("skip")[0], 200)
+        while self.state["phase"] == "assessment":
+            self.assertEqual(self.mutate("skip")[0], 200)
         status, exported, _ = self.request("GET", "/api/export", cookie=self.cookie)
         self.assertEqual(status, 200)
         serialized = json.dumps(exported)
@@ -168,7 +171,7 @@ class HTTPTests(unittest.TestCase):
 
     def shared_database_race(self, first_path, first_payload, second_payload):
         """Force two independent servers to read the same snapshot, then commit in order."""
-        other = server.LocalServer(port=0, db_path=self.db_path)
+        other = server.LocalServer(port=0, db_path=self.db_path, ai_config=TutorConfig())
         thread = threading.Thread(target=other.serve_forever, daemon=True)
         thread.start()
         ready = threading.Barrier(2)
@@ -201,8 +204,6 @@ class HTTPTests(unittest.TestCase):
 
     def enter_transfer(self):
         self.enter_training()
-        while self.state["stage"] == "guided":
-            self.assertEqual(self.mutate("skip")[0], 200)
 
     def test_two_servers_cannot_erase_help_with_concurrent_answer(self):
         self.enter_transfer()
@@ -296,7 +297,7 @@ store.save(sys.argv[2], state, expected_snapshot=snapshot)
             read = pool.submit(self.request, "GET", "/api/state", cookie=self.cookie)
             release.set()
             self.assertEqual(mutation.result()[0], 200)
-            self.assertEqual(read.result()[1]["phase"], "diagnostic")
+            self.assertEqual(read.result()[1]["phase"], "catalog")
 
     def test_preview_is_read_only_and_stale_instance_rejected(self):
         self.enter_training()
@@ -361,7 +362,7 @@ store.save(sys.argv[2], state, expected_snapshot=snapshot)
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(2)
-        self.server = server.LocalServer(port=0, db_path=self.db_path)
+        self.server = server.LocalServer(port=0, db_path=self.db_path, ai_config=TutorConfig())
         self.port = self.server.server_port
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -370,6 +371,31 @@ store.save(sys.argv[2], state, expected_snapshot=snapshot)
         self.assertEqual(after["instance_id"], before["instance_id"])
         self.assertEqual(after["revision"], before["revision"])
         self.assertTrue(after["help_used"])
+
+    def test_inflight_legacy_assessment_stays_frozen_then_migrates_atomically(self):
+        old = legacy_engine.new_state()
+        legacy_engine.action(old, {"action": "start", "revision": old["revision"], "minutes": 20})
+        participant, token = old["participant"], old["csrf"]
+        instance = old["instance_id"]
+        sid = self.cookie.split("=", 1)[1]
+        _, snapshot = self.server.store.load_snapshot(sid)
+        self.server.store.save(sid, old, expected_snapshot=snapshot)
+        status, self.state, _ = self.request("GET", "/api/state", cookie=self.cookie)
+        self.assertEqual(status, 200)
+        self.assertTrue(self.state["legacy_mode"])
+        self.assertEqual(self.state["phase"], "diagnostic")
+        self.assertEqual(self.state["instance_id"], instance)
+        self.assertEqual(self.request("GET", "/api/catalog", cookie=self.cookie)[0], 409)
+        self.assertEqual(self.request("GET", "/api/export", cookie=self.cookie)[0], 409)
+        self.assertEqual(self.mutate("skip")[0], 200)
+        self.assertFalse(self.state["legacy_mode"])
+        self.assertEqual(self.state["phase"], "catalog")
+        self.assertEqual(self.state["participant"], participant)
+        self.assertEqual(self.state["csrf"], token)
+        self.assertEqual(self.stored()["version"], 3)
+        self.assertTrue(self.stored()["legacy_archive"])
+        revision = self.state["revision"]
+        self.assertEqual(self.request("GET", "/api/state", cookie=self.cookie)[1]["revision"], revision)
 
 
 if __name__ == "__main__":
